@@ -4,10 +4,18 @@ import React from "react";
 
 /**
  * A Next.js Server Component that acts as a SaaS Paywall.
- * It queries Supabase natively, and if the user lacks an 'active' Stripe status,
- * it permanently blurs out the dashboard content beneath it and intercepts clicks.
+ * 
+ * LAUNCH MODE: When NEXT_PUBLIC_DEMO_MODE=true, all features are unlocked.
+ * This lets you demo and sell the product before wiring up payment processing.
+ * Once you have paying customers, set NEXT_PUBLIC_DEMO_MODE=false and configure Razorpay.
  */
 export async function SubscriptionGuard({ children }: { children: React.ReactNode }) {
+  // DEMO MODE — unlock everything for launch / demos / early users
+  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+  if (isDemoMode) {
+    return <>{children}</>;
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -50,14 +58,12 @@ export async function SubscriptionGuard({ children }: { children: React.ReactNod
             You need an active subscription to configure AI agents, manage webhooks, and recover abandoned checkouts autonomously.
           </p>
 
-          <form action="/api/checkout" method="POST">
-            <button 
-              type="submit"
-              className="w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-lg font-bold py-4 px-6 rounded-xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)]"
-            >
-              Subscribe Now
-            </button>
-          </form>
+          <a 
+            href="mailto:your-email@example.com?subject=Revmo%20Subscription%20Request"
+            className="block w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-lg font-bold py-4 px-6 rounded-xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)]"
+          >
+            Contact Us to Subscribe
+          </a>
 
         </div>
       </div>

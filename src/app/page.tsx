@@ -6,19 +6,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap,
   Bot,
-  TrendingUp,
   MessageCircle,
   Phone,
   Package,
   ArrowRight,
   Check,
-  Star,
   BarChart3,
   Shield,
   ChevronRight,
-  Sparkles,
   Globe,
-  Clock,
+  Lock,
+  Cpu,
 } from "lucide-react";
 
 /* ============================================ */
@@ -34,7 +32,7 @@ const fadeUp = {
 };
 
 const scaleIn = {
-  hidden: { opacity: 0, scale: 0.9 },
+  hidden: { opacity: 0, scale: 0.95 },
   visible: {
     opacity: 1,
     scale: 1,
@@ -54,16 +52,13 @@ const agents = [
     bg: "rgba(16,185,129,0.1)",
     border: "rgba(16,185,129,0.2)",
     description:
-      "AI-powered demand forecasting, automatic reordering, and stock optimization. Never overstock or go out-of-stock again.",
-    stats: [
-      { label: "Stock Accuracy", value: "98.5%" },
-      { label: "Avg Savings", value: "₹45K/mo" },
-    ],
+      "Connects to your Shopify store and scans your entire product catalog every morning. If any SKU is heading toward a stockout based on your defined threshold, it drafts a vendor Purchase Order automatically.",
+    how: "Powered by Shopify Admin API + OpenAI, running on a daily Inngest Cron job.",
     features: [
-      "Demand forecasting with 95%+ accuracy",
-      "Automated purchase orders & reorder alerts",
-      "Seasonal trend detection & planning",
-      "Dead stock identification & liquidation",
+      "Daily automated stock level analysis",
+      "Configurable low-stock threshold alerts",
+      "AI-drafted Purchase Order emails for vendors",
+      "Works on your own Shopify + OpenAI API keys",
     ],
   },
   {
@@ -74,16 +69,13 @@ const agents = [
     bg: "rgba(124,58,237,0.1)",
     border: "rgba(124,58,237,0.2)",
     description:
-      "Recover abandoned carts, send personalized offers, and nurture customers — all through AI-powered WhatsApp conversations.",
-    stats: [
-      { label: "Cart Recovery", value: "32%" },
-      { label: "Open Rate", value: "94%" },
-    ],
+      "When a customer abandons their cart, this agent waits for a delay you define, generates a personalised WhatsApp message using your store's data, and sends it via Twilio. Customers can reply and the agent handles the conversation.",
+    how: "Powered by Twilio WhatsApp API + OpenAI GPT-4o-mini, triggered by Shopify checkout webhooks.",
     features: [
-      "Abandoned cart recovery with smart nudges",
-      "Personalized product recommendations",
-      "Sentiment analysis & escalation",
-      "Multi-language support (Hindi, English, Regional)",
+      "Triggered by real Shopify abandoned checkout events",
+      "Personalised message using customer name & cart items",
+      "Two-way conversation handling via TwiML",
+      "Configurable delay before sending (in minutes)",
     ],
   },
   {
@@ -94,16 +86,13 @@ const agents = [
     bg: "rgba(37,99,235,0.1)",
     border: "rgba(37,99,235,0.2)",
     description:
-      "AI voice agent that qualifies leads, follows up on high-value orders, and closes deals with natural-sounding conversations.",
-    stats: [
-      { label: "Close Rate", value: "28%" },
-      { label: "Calls/Day", value: "500+" },
-    ],
+      "Triggers an AI phone call to a customer who abandoned a high-value cart. Uses Bland.ai to place the call with a persona and script you define in the dashboard. No human needed.",
+    how: "Powered by Bland.ai Voice API, triggered by Shopify checkout webhooks via Inngest queue.",
     features: [
-      "Natural voice AI with emotional intelligence",
-      "Lead qualification & priority scoring",
-      "Follow-up scheduling & CRM sync",
-      "Call recording & sentiment analytics",
+      "Outbound AI voice call on cart abandonment",
+      "Fully configurable voice persona and script",
+      "Built-in 15-minute call delay by default",
+      "Uses your own Bland.ai API key securely",
     ],
   },
 ];
@@ -112,82 +101,79 @@ const plans = [
   {
     name: "Starter",
     price: 499,
-    description: "Perfect for new D2C brands starting their automation journey",
+    description: "One agent for stores just getting started with automation",
     features: [
-      "1 AI Agent (choose any)",
-      "Up to 500 orders/month",
+      "1 AI Agent of your choice",
+      "Connect your own API keys",
+      "Up to 500 events/month",
       "Basic analytics dashboard",
       "Email support",
-      "1 team member",
-      "Shopify OR WooCommerce",
     ],
-    cta: "Start Free Trial",
+    cta: "Get Started",
     popular: false,
   },
   {
     name: "Growth",
     price: 699,
-    description: "For scaling brands that need all three AI agents working together",
+    description: "All three agents working together on one platform",
     features: [
       "All 3 AI Agents",
-      "Up to 5,000 orders/month",
-      "Advanced analytics & reports",
-      "WhatsApp + Email support",
-      "5 team members",
-      "Priority API access",
-      "Custom automations",
+      "Connect your own API keys",
+      "Up to 5,000 events/month",
+      "Full analytics & event logs",
+      "WhatsApp + email support",
+      "Priority Inngest queue",
     ],
-    cta: "Start Free Trial",
+    cta: "Get Started",
     popular: true,
   },
   {
     name: "Scale",
     price: 999,
-    description: "Enterprise-grade for high-volume D2C operations",
+    description: "For high-volume stores that need maximum throughput",
     features: [
-      "All 3 AI Agents + Custom agents",
-      "Unlimited orders",
-      "AI-powered reports & forecasting",
-      "Dedicated account manager",
-      "Unlimited team members",
+      "All 3 AI Agents",
+      "Unlimited events/month",
+      "Custom agent configurations",
+      "Dedicated onboarding call",
       "Multi-store support",
-      "Custom integrations & API",
-      "SOC 2 compliance",
+      "Custom API integrations",
     ],
-    cta: "Contact Sales",
+    cta: "Contact Us",
     popular: false,
   },
 ];
 
-const metrics = [
-  { value: "2,400+", label: "Active Stores", icon: Globe },
-  { value: "₹12Cr+", label: "Revenue Recovered", icon: TrendingUp },
-  { value: "94%", label: "Customer Retention", icon: Star },
-  { value: "< 2min", label: "Setup Time", icon: Clock },
+const howItWorks = [
+  {
+    step: "01",
+    title: "Connect Your Store",
+    desc: "Link your Shopify store and add your own API keys (OpenAI, Twilio, Bland.ai). Your keys stay encrypted and never leave your account.",
+    icon: Globe,
+  },
+  {
+    step: "02",
+    title: "Configure Your Agents",
+    desc: "Set thresholds, delays, personas, and prompts for each agent from your dashboard. You stay in full control of how each agent behaves.",
+    icon: Cpu,
+  },
+  {
+    step: "03",
+    title: "Agents Run Automatically",
+    desc: "Shopify fires webhooks to Revmo on cart abandonment. Agents wake up, fetch your config, and take action — voice call, WhatsApp message, or inventory report.",
+    icon: Bot,
+  },
 ];
 
-const testimonials = [
-  {
-    name: "Priya Sharma",
-    role: "Founder, EthnicWeave",
-    text: "Revmo's WhatsApp agent recovered ₹4.2L in abandoned carts in just the first month. It's like having a 24/7 sales team.",
-    avatar: "PS",
-    rating: 5,
-  },
-  {
-    name: "Rajesh Kannan",
-    role: "CEO, FreshBasket",
-    text: "The Inventory Optimizer cut our wastage by 40%. We never overstock perishables anymore. Absolute game-changer.",
-    avatar: "RK",
-    rating: 5,
-  },
-  {
-    name: "Ananya Patel",
-    role: "Head of Growth, UrbanCraft",
-    text: "Voice Closer handles 500+ calls daily. Our close rate jumped from 8% to 28% in two months. Insane ROI.",
-    avatar: "AP",
-    rating: 5,
-  },
+const techStack = [
+  "Shopify Admin API",
+  "OpenAI GPT-4o-mini",
+  "Twilio WhatsApp",
+  "Bland.ai Voice",
+  "Inngest Queue",
+  "Supabase (Auth + DB)",
+  "Razorpay Billing",
+  "AES-256 Encryption",
 ];
 
 /* ============================================ */
@@ -224,14 +210,14 @@ export default function LandingPage() {
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
+            <a href="#how-it-works" className="text-sm text-[var(--color-text-secondary)] hover:text-white transition-colors">
+              How It Works
+            </a>
             <a href="#agents" className="text-sm text-[var(--color-text-secondary)] hover:text-white transition-colors">
               Agents
             </a>
             <a href="#pricing" className="text-sm text-[var(--color-text-secondary)] hover:text-white transition-colors">
               Pricing
-            </a>
-            <a href="#testimonials" className="text-sm text-[var(--color-text-secondary)] hover:text-white transition-colors">
-              Testimonials
             </a>
           </div>
 
@@ -246,7 +232,7 @@ export default function LandingPage() {
               href="/signup"
               className="text-sm font-semibold text-white gradient-bg px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity"
             >
-              Start Free Trial
+              Get Started
             </Link>
           </div>
         </div>
@@ -254,7 +240,8 @@ export default function LandingPage() {
 
       {/* ───── Hero ───── */}
       <section className="relative pt-32 pb-20 px-6">
-        <div className="max-w-6xl mx-auto text-center">
+        <div className="max-w-5xl mx-auto text-center">
+
           {/* Badge */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -262,8 +249,8 @@ export default function LandingPage() {
             transition={{ duration: 0.5 }}
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[rgba(124,58,237,0.3)] bg-[rgba(124,58,237,0.08)] text-sm font-medium text-[#c4b5fd] mb-8"
           >
-            <Sparkles className="w-4 h-4" />
-            <span>3 AI Agents. Zero Manual Work.</span>
+            <Bot className="w-4 h-4" />
+            <span>3 Shopify AI Agents — Built and deployed</span>
           </motion.div>
 
           {/* Heading */}
@@ -271,24 +258,21 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1 }}
-            className="text-5xl md:text-7xl font-black tracking-tight leading-[1.05] mb-6"
+            className="text-5xl md:text-6xl font-black tracking-tight leading-[1.08] mb-6"
           >
-            AI Agents That
+            Automate the work that
             <br />
-            <span className="gradient-text">Sell For You</span>
+            <span className="gradient-text">costs you revenue every day</span>
           </motion.h1>
 
-          {/* Subtitle */}
+          {/* Subtitle — honest, specific */}
           <motion.p
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.2 }}
             className="text-lg md:text-xl text-[var(--color-text-secondary)] max-w-2xl mx-auto mb-10 leading-relaxed"
           >
-            Revmo deploys 3 specialized AI agents to your Shopify or WooCommerce
-            store — optimizing inventory, nudging customers on WhatsApp, and
-            closing deals by voice.{" "}
-            <span className="text-white font-medium">All on autopilot.</span>
+            Revmo connects 3 specialized AI agents to your Shopify store — recovering abandoned carts via WhatsApp and voice calls, and alerting you when inventory goes critical. You bring your API keys. We handle the orchestration.
           </motion.p>
 
           {/* CTAs */}
@@ -302,11 +286,11 @@ export default function LandingPage() {
               href="/signup"
               className="group flex items-center gap-2 gradient-bg text-white font-semibold px-8 py-3.5 rounded-xl text-base hover:opacity-90 transition-all shadow-lg shadow-purple-500/20"
             >
-              Start Free — 14 Days
+              Start Free Trial
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
             <a
-              href="#agents"
+              href="#how-it-works"
               className="flex items-center gap-2 text-[var(--color-text-secondary)] font-medium px-8 py-3.5 rounded-xl border border-[var(--color-border-glass)] hover:bg-[rgba(255,255,255,0.04)] transition-colors"
             >
               See How It Works
@@ -314,36 +298,75 @@ export default function LandingPage() {
             </a>
           </motion.div>
 
-          {/* Trust Metrics */}
+          {/* Honest trust signals */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.5 }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto"
+            className="flex flex-wrap items-center justify-center gap-6 text-sm text-[var(--color-text-muted)]"
           >
-            {metrics.map((m, i) => (
-              <div
-                key={i}
-                className="glass-card px-4 py-3.5 flex flex-col items-center gap-1"
-              >
-                <m.icon className="w-4 h-4 text-[var(--color-accent)] mb-1" />
-                <span className="text-xl font-bold">{m.value}</span>
-                <span className="text-xs text-[var(--color-text-muted)]">
-                  {m.label}
-                </span>
-              </div>
-            ))}
+            <span className="flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> Your API keys encrypted with AES-256</span>
+            <span className="flex items-center gap-1.5"><Shield className="w-3.5 h-3.5" /> No credit card for trial</span>
+            <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" /> Setup in under 5 minutes</span>
           </motion.div>
         </div>
 
         {/* Decorative orbs */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[rgba(124,58,237,0.08)] rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-[rgba(6,182,212,0.06)] rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[rgba(124,58,237,0.07)] rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-[rgba(6,182,212,0.05)] rounded-full blur-[100px] pointer-events-none" />
+      </section>
+
+      {/* ───── How It Works ───── */}
+      <section id="how-it-works" className="py-24 px-6">
+        <div className="max-w-5xl mx-auto">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            className="text-center mb-16"
+          >
+            <motion.h2
+              variants={fadeUp}
+              custom={0}
+              className="text-3xl md:text-4xl font-black tracking-tight mb-4"
+            >
+              How Revmo works
+            </motion.h2>
+            <motion.p
+              variants={fadeUp}
+              custom={1}
+              className="text-[var(--color-text-secondary)] max-w-xl mx-auto"
+            >
+              No black boxes. Here is exactly what happens from setup to your agents running.
+            </motion.p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {howItWorks.map((step, i) => (
+              <motion.div
+                key={i}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeUp}
+                custom={i}
+                className="glass-card p-6"
+              >
+                <div className="w-10 h-10 rounded-xl gradient-bg flex items-center justify-center mb-4">
+                  <step.icon className="w-5 h-5 text-white" />
+                </div>
+                <div className="text-xs font-bold text-[var(--color-accent)] mb-1 uppercase tracking-wider">Step {step.step}</div>
+                <h3 className="text-lg font-bold mb-2">{step.title}</h3>
+                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">{step.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* ───── AI Agents Section ───── */}
       <section id="agents" className="py-24 px-6">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <motion.div
             initial="hidden"
             whileInView="visible"
@@ -356,28 +379,26 @@ export default function LandingPage() {
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[rgba(16,185,129,0.3)] bg-[rgba(16,185,129,0.08)] text-sm font-medium text-[#6ee7b7] mb-4"
             >
               <Bot className="w-4 h-4" />
-              Meet Your AI Team
+              The Three Agents
             </motion.div>
             <motion.h2
               variants={fadeUp}
               custom={1}
-              className="text-3xl md:text-5xl font-black tracking-tight mb-4"
+              className="text-3xl md:text-4xl font-black tracking-tight mb-4"
             >
-              3 Agents. 1 Platform.{" "}
-              <span className="gradient-text">Infinite Growth.</span>
+              What each agent actually does
             </motion.h2>
             <motion.p
               variants={fadeUp}
               custom={2}
               className="text-[var(--color-text-secondary)] max-w-xl mx-auto"
             >
-              Each agent is specialized in one critical aspect of your ecommerce
-              operations and works 24/7.
+              Each agent is purpose-built for one job. No bloat, no vague promises.
             </motion.p>
           </motion.div>
 
           {/* Agent Tabs */}
-          <div className="flex gap-3 justify-center mb-12">
+          <div className="flex gap-3 justify-center mb-10 flex-wrap">
             {agents.map((a, i) => (
               <button
                 key={i}
@@ -394,8 +415,7 @@ export default function LandingPage() {
                 }
               >
                 <a.icon className="w-4 h-4" />
-                <span className="hidden sm:inline">{a.name}</span>
-                <span className="sm:hidden">{a.tag}</span>
+                {a.name}
               </button>
             ))}
           </div>
@@ -407,8 +427,8 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.4 }}
-              className="glass-card p-8 md:p-12"
+              transition={{ duration: 0.35 }}
+              className="glass-card p-8 md:p-10"
             >
               <div className="grid md:grid-cols-2 gap-8">
                 {/* Left */}
@@ -422,35 +442,26 @@ export default function LandingPage() {
                   >
                     {agents[activeAgent].tag}
                   </div>
-                  <h3 className="text-2xl md:text-3xl font-bold mb-3">
+                  <h3 className="text-2xl font-bold mb-3">
                     {agents[activeAgent].name}
                   </h3>
-                  <p className="text-[var(--color-text-secondary)] mb-6 leading-relaxed">
+                  <p className="text-[var(--color-text-secondary)] mb-4 leading-relaxed">
                     {agents[activeAgent].description}
                   </p>
 
-                  {/* Stats */}
-                  <div className="flex gap-6 mb-8">
-                    {agents[activeAgent].stats.map((s, i) => (
-                      <div key={i}>
-                        <div
-                          className="text-2xl font-black"
-                          style={{ color: agents[activeAgent].color }}
-                        >
-                          {s.value}
-                        </div>
-                        <div className="text-xs text-[var(--color-text-muted)]">
-                          {s.label}
-                        </div>
-                      </div>
-                    ))}
+                  {/* Tech transparency */}
+                  <div className="mb-6 p-3 rounded-xl bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.05)]">
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      <span className="font-semibold text-white">Under the hood:</span>{" "}
+                      {agents[activeAgent].how}
+                    </p>
                   </div>
 
                   <Link
                     href="/signup"
                     className="inline-flex items-center gap-2 gradient-bg text-white font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition"
                   >
-                    Activate {agents[activeAgent].name}
+                    Set Up {agents[activeAgent].name}
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>
@@ -462,7 +473,7 @@ export default function LandingPage() {
                       key={`${activeAgent}-${i}`}
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.1 }}
+                      transition={{ delay: i * 0.08 }}
                       className="flex items-start gap-3 p-3 rounded-xl bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.04)]"
                     >
                       <Check
@@ -481,9 +492,42 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ───── Tech Stack ───── */}
+      <section className="py-16 px-6">
+        <div className="max-w-5xl mx-auto text-center">
+          <motion.p
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            custom={0}
+            className="text-sm text-[var(--color-text-muted)] mb-6 uppercase tracking-wider font-semibold"
+          >
+            Built on real infrastructure
+          </motion.p>
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            custom={1}
+            className="flex flex-wrap items-center justify-center gap-3"
+          >
+            {techStack.map((tech, i) => (
+              <span
+                key={i}
+                className="text-sm text-[var(--color-text-secondary)] border border-[var(--color-border-glass)] px-4 py-1.5 rounded-full bg-[rgba(255,255,255,0.02)]"
+              >
+                {tech}
+              </span>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
       {/* ───── Pricing Section ───── */}
       <section id="pricing" className="py-24 px-6">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <motion.div
             initial="hidden"
             whileInView="visible"
@@ -496,22 +540,23 @@ export default function LandingPage() {
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.08)] text-sm font-medium text-[#fbbf24] mb-4"
             >
               <BarChart3 className="w-4 h-4" />
-              Simple Pricing
+              Pricing
             </motion.div>
             <motion.h2
               variants={fadeUp}
               custom={1}
-              className="text-3xl md:text-5xl font-black tracking-tight mb-4"
+              className="text-3xl md:text-4xl font-black tracking-tight mb-4"
             >
-              Start Free.{" "}
-              <span className="gradient-text">Scale As You Grow.</span>
+              Straightforward pricing.{" "}
+              <span className="gradient-text">No surprises.</span>
             </motion.h2>
             <motion.p
               variants={fadeUp}
               custom={2}
               className="text-[var(--color-text-secondary)] max-w-xl mx-auto"
             >
-              14-day free trial on all plans. No credit card required.
+              14-day free trial. No credit card required. Cancel anytime —
+              your data and API keys can be exported at any time.
             </motion.p>
           </motion.div>
 
@@ -576,64 +621,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ───── Testimonials ───── */}
-      <section id="testimonials" className="py-24 px-6">
-        <div className="max-w-6xl mx-auto">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            className="text-center mb-16"
-          >
-            <motion.h2
-              variants={fadeUp}
-              custom={0}
-              className="text-3xl md:text-5xl font-black tracking-tight mb-4"
-            >
-              Loved by{" "}
-              <span className="gradient-text">2,400+ D2C Brands</span>
-            </motion.h2>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {testimonials.map((t, i) => (
-              <motion.div
-                key={i}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                variants={fadeUp}
-                custom={i}
-                className="glass-card p-6"
-              >
-                <div className="flex gap-1 mb-4">
-                  {Array.from({ length: t.rating }).map((_, j) => (
-                    <Star
-                      key={j}
-                      className="w-4 h-4 fill-[#fbbf24] text-[#fbbf24]"
-                    />
-                  ))}
-                </div>
-                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed mb-6">
-                  &ldquo;{t.text}&rdquo;
-                </p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full gradient-bg flex items-center justify-center text-xs font-bold text-white">
-                    {t.avatar}
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold">{t.name}</div>
-                    <div className="text-xs text-[var(--color-text-muted)]">
-                      {t.role}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ───── CTA Section ───── */}
       <section className="py-24 px-6">
         <div className="max-w-4xl mx-auto">
@@ -644,27 +631,26 @@ export default function LandingPage() {
             variants={scaleIn}
             className="relative overflow-hidden rounded-3xl p-12 md:p-16 text-center border-gradient"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-[rgba(124,58,237,0.12)] to-[rgba(6,182,212,0.06)]" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[rgba(124,58,237,0.1)] to-[rgba(6,182,212,0.05)]" />
             <div className="relative z-10">
               <h2 className="text-3xl md:text-4xl font-black mb-4">
-                Ready to Let AI Sell For You?
+                Start automating your store today
               </h2>
               <p className="text-[var(--color-text-secondary)] mb-8 max-w-xl mx-auto">
-                Join 2,400+ Indian D2C brands already using Revmo to automate
-                sales, recover abandoned carts, and grow revenue on autopilot.
+                Set up in minutes. Connect Shopify, add your API keys, configure
+                your agents, and let them run. No hidden fees. No lock-in.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Link
                   href="/signup"
                   className="group flex items-center gap-2 gradient-bg text-white font-semibold px-8 py-4 rounded-xl text-base hover:opacity-90 transition-all shadow-lg shadow-purple-500/20"
                 >
-                  Start Free — 14 Days
+                  Start Free Trial
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </div>
               <p className="text-xs text-[var(--color-text-muted)] mt-4 flex items-center justify-center gap-1">
-                <Shield className="w-3 h-3" /> No credit card required · Setup
-                in under 2 minutes
+                <Shield className="w-3 h-3" /> No credit card required · Your API keys stay encrypted
               </p>
             </div>
           </motion.div>
@@ -688,12 +674,12 @@ export default function LandingPage() {
               <a href="#" className="hover:text-white transition-colors">
                 Terms
               </a>
-              <a href="#" className="hover:text-white transition-colors">
-                Contact
+              <a href="/login" className="hover:text-white transition-colors">
+                Log In
               </a>
             </div>
             <p className="text-xs text-[var(--color-text-muted)]">
-              © 2026 Revmo.ai · Built with ❤️ in India
+              © 2026 Revmo.ai
             </p>
           </div>
         </div>

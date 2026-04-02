@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
+import { razorpay } from "@/lib/razorpay";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
@@ -11,37 +11,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Default to the origin or public APP URL
-    const origin = req.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    
-    // In MVP, we lock to a single tier price ID from ENV
-    const priceId = process.env.STRIPE_PRICE_ID; 
-    
-    if (!priceId) {
-      console.error("[Stripe] STRIPE_PRICE_ID missing in environment.");
+    const planId = process.env.RAZORPAY_PLAN_ID;
+
+    if (!planId) {
+      console.error("[Razorpay] RAZORPAY_PLAN_ID missing in environment.");
       return NextResponse.json({ error: "Platform billing not configured." }, { status: 500 });
     }
 
-    const checkoutSession = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      mode: 'subscription',
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      client_reference_id: user.id, // Binds the checkout precisely to the Supabase UUID
-      success_url: `${origin}/dashboard?checkout_success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/dashboard?checkout_canceled=true`,
-      metadata: {
-        userId: user.id
-      }
+    // Create a Razorpay Subscription
+    const subscription = await razorpay.subscriptions.create({
+      plan_id: planId,
+      customer_notify: 1,
+      quantity: 1,
+      total_count: 12, // 12 billing cycles (1 year)
+      notes: {
+        userId: user.id,
+        userEmail: user.email || "",
+      },
     });
 
-    return NextResponse.json({ url: checkoutSession.url });
+    return NextResponse.json({
+      subscriptionId: subscription.id,
+      keyId: process.env.RAZORPAY_KEY_ID,
+    });
   } catch (error: any) {
-    console.error("[Stripe Checkout Error]", error);
+    console.error("[Razorpay Checkout Error]", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
+import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
-import Stripe from "stripe";
 
-// Initialize the Admin Supabase client to bypass RLS for background database mutations
+// Admin Supabase client — bypasses RLS for server-side writes
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
   process.env.SUPABASE_SERVICE_ROLE_KEY || "",
@@ -12,78 +11,84 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
   const body = await req.text();
-  const signature = req.headers.get("stripe-signature");
+  const signature = req.headers.get("x-razorpay-signature");
+  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
-  if (!signature || !process.env.STRIPE_WEBHOOK_SECRET) {
+  if (!signature || !webhookSecret) {
     return NextResponse.json({ error: "Missing signature or webhook secret" }, { status: 400 });
   }
 
-  let event: Stripe.Event;
+  // Verify Razorpay webhook signature (HMAC SHA256)
+  const expectedSignature = crypto
+    .createHmac("sha256", webhookSecret)
+    .update(body)
+    .digest("hex");
 
-  try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
-  } catch (err: any) {
-    console.error(`⚠️ Webhook signature verification failed.`, err.message);
-    return NextResponse.json({ error: err.message }, { status: 400 });
+  if (expectedSignature !== signature) {
+    console.error("⚠️ Razorpay webhook signature verification failed.");
+    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  // Handle the event types
-  try {
-    switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
-        const userId = session.metadata?.userId || session.client_reference_id;
-        
-        if (!userId) {
-          throw new Error("Missing userId in session metadata.");
-        }
+  const event = JSON.parse(body);
+  const { event: eventType, payload } = event;
 
-        // Retrieve the subscription details
-        const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+  try {
+    switch (eventType) {
+      // Subscription activated / payment captured
+      case "subscription.activated":
+      case "payment.captured": {
+        const subscription = payload.subscription?.entity;
+        if (!subscription) break;
+
+        const userId = subscription.notes?.userId;
+        if (!userId) {
+          console.error("[Razorpay Webhook] Missing userId in subscription notes.");
+          break;
+        }
 
         const { error } = await supabaseAdmin
           .from("subscriptions")
           .upsert({
             user_id: userId,
-            stripe_customer_id: session.customer as string,
+            stripe_customer_id: subscription.customer_id || subscription.id, // reuse column for Razorpay customer
             stripe_subscription_id: subscription.id,
-            status: subscription.status,
-            price_id: (subscription as any).items?.data[0]?.price?.id || "unknown",
-            current_period_end: new Date(((subscription as any).current_period_end || Date.now()/1000) * 1000).toISOString(),
-            updated_at: new Date().toISOString()
+            status: subscription.status === "active" ? "active" : subscription.status,
+            price_id: subscription.plan_id || "unknown",
+            current_period_end: subscription.current_end
+              ? new Date(subscription.current_end * 1000).toISOString()
+              : null,
+            updated_at: new Date().toISOString(),
           }, { onConflict: "user_id" });
 
         if (error) throw error;
+        console.log(`[Razorpay] Subscription activated for user ${userId}`);
         break;
       }
 
-      case "customer.subscription.updated":
-      case "customer.subscription.deleted": {
-        const subscription = event.data.object as Stripe.Subscription;
-        
+      // Subscription cancelled or expired
+      case "subscription.cancelled":
+      case "subscription.completed": {
+        const subscription = payload.subscription?.entity;
+        if (!subscription) break;
+
         const { error } = await supabaseAdmin
           .from("subscriptions")
           .update({
-            status: subscription.status,
-            price_id: (subscription as any).items?.data[0]?.price?.id || "unknown",
-            current_period_end: new Date(((subscription as any).current_period_end || Date.now()/1000) * 1000).toISOString(),
-            updated_at: new Date().toISOString()
+            status: eventType === "subscription.cancelled" ? "canceled" : "completed",
+            updated_at: new Date().toISOString(),
           })
           .eq("stripe_subscription_id", subscription.id);
 
         if (error) throw error;
+        console.log(`[Razorpay] Subscription ${eventType} for sub ${subscription.id}`);
         break;
       }
 
       default:
-        console.log(`Unhandled event type ${event.type}`);
+        console.log(`[Razorpay Webhook] Unhandled event type: ${eventType}`);
     }
   } catch (err: any) {
-    console.error(`[Stripe Webhook] Error processing event:`, err.message);
+    console.error(`[Razorpay Webhook] Error processing event:`, err.message);
     return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 });
   }
 
