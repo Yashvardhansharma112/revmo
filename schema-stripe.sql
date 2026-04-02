@@ -1,4 +1,4 @@
--- Revmo.ai Phase 6 Schema: Stripe Subscriptions
+-- StorePilot Phase 6 Schema: Stripe Subscriptions
 -- Run this in the Supabase SQL Editor alongside your auth triggers
 
 CREATE TABLE IF NOT EXISTS public.subscriptions (

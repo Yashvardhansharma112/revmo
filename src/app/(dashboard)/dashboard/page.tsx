@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import {
   TrendingUp,
   TrendingDown,
@@ -40,7 +40,7 @@ const recoveryData = [
   { name: 'Sun', recovered: 70, abandoned: 140 },
 ];
 
-const fadeUp = {
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
     opacity: 1,

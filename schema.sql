@@ -1,4 +1,4 @@
--- Revmo.ai Phase 2 Schema: Agent Configurations
+-- StorePilot Phase 2 Schema: Agent Configurations
 -- Run this in the Supabase SQL Editor
 
 -- Create the agent_configurations table

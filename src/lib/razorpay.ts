@@ -8,6 +8,6 @@ if (!keyId || !keySecret) {
 }
 
 export const razorpay = new Razorpay({
-  key_id: keyId,
-  key_secret: keySecret,
+  key_id: keyId || "rzp_test_dummy",
+  key_secret: keySecret || "dummy_secret",
 });

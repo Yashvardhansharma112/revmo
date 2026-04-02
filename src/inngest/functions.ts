@@ -14,8 +14,11 @@ const supabase = createClient(supabaseUrl, supabaseKey);
  * using the configured keys and scripts stored in Supabase.
  */
 export const recoverAbandonedCheckout = inngest.createFunction(
-  { id: "recover-abandoned-checkout", name: "Recover Abandoned Checkout" },
-  { event: "StorePilot/checkout.abandoned" },
+  { 
+    id: "recover-abandoned-checkout", 
+    name: "Recover Abandoned Checkout",
+    triggers: [{ event: "StorePilot/checkout.abandoned" }]
+  },
   async ({ event, step }) => {
     // @ts-ignore
     const { checkoutId, phone, customerName, cartTotal, items, abandonUrl } = event.data;
@@ -34,7 +37,7 @@ export const recoverAbandonedCheckout = inngest.createFunction(
         .single();
         
       if (voiceError || !voiceConfig) {
-        return { configured: false };
+        return { configured: false, blandKey: null, persona: null, script: null };
       }
 
       // Fetch the merchant's integration keys
@@ -46,7 +49,7 @@ export const recoverAbandonedCheckout = inngest.createFunction(
          .single();
          
       if (!integrationsData || !integrationsData.api_keys) {
-        return { configured: false };
+        return { configured: false, blandKey: null, persona: null, script: null };
       }
       
       const apiKeys = integrationsData.api_keys;
@@ -99,8 +102,11 @@ export const recoverAbandonedCheckout = inngest.createFunction(
  * text message via OpenAI and sending it over Twilio WhatsApp API.
  */
 export const recoverViaWhatsApp = inngest.createFunction(
-  { id: "recover-via-whatsapp", name: "Recover via WhatsApp" },
-  { event: "StorePilot/checkout.abandoned" },
+  { 
+    id: "recover-via-whatsapp", 
+    name: "Recover via WhatsApp",
+    triggers: [{ event: "StorePilot/checkout.abandoned" }]
+  },
   async ({ event, step }) => {
     // @ts-ignore
     const { checkoutId, phone, customerName, cartTotal, items, abandonUrl } = event.data;
@@ -115,7 +121,15 @@ export const recoverViaWhatsApp = inngest.createFunction(
         .single();
         
       if (waError || !waConfig || !waConfig.settings?.isActive) {
-        return { configured: false };
+        return { 
+          configured: false, 
+          openaiKey: null, 
+          twilioSid: null, 
+          twilioToken: null, 
+          senderId: null, 
+          delayMinutes: 0, 
+          prompt: null 
+        };
       }
 
       const { data: integrationsData } = await supabase
@@ -126,7 +140,15 @@ export const recoverViaWhatsApp = inngest.createFunction(
          .single();
          
       if (!integrationsData || !integrationsData.api_keys) {
-        return { configured: false };
+        return { 
+          configured: false, 
+          openaiKey: null, 
+          twilioSid: null, 
+          twilioToken: null, 
+          senderId: null, 
+          delayMinutes: 0, 
+          prompt: null 
+        };
       }
       
       const apiKeys = integrationsData.api_keys;
@@ -221,8 +243,11 @@ export const recoverViaWhatsApp = inngest.createFunction(
  * anyone with `inventory` active, and fans out discrete jobs per merchant.
  */
 export const generateDailyInventoryReport = inngest.createFunction(
-  { id: "generate-daily-inventory-report", name: "Generate Daily Inventory Report" },
-  { cron: "TZ=America/New_York 0 8 * * *" }, // Runs daily at 8:00 AM EST
+  { 
+    id: "generate-daily-inventory-report", 
+    name: "Generate Daily Inventory Report",
+    triggers: [{ cron: "TZ=America/New_York 0 8 * * *" }]
+  },
   async ({ step }) => {
     
     const merchants = await step.run("fetch-active-merchants", async () => {
@@ -267,8 +292,11 @@ export const generateDailyInventoryReport = inngest.createFunction(
  * runs velocity math, and asks an LLM to draft a purchasing request.
  */
 export const processMerchantInventory = inngest.createFunction(
-  { id: "process-merchant-inventory", name: "Process Merchant Inventory" },
-  { event: "StorePilot/inventory.scan.merchant" },
+  { 
+    id: "process-merchant-inventory", 
+    name: "Process Merchant Inventory",
+    triggers: [{ event: "StorePilot/inventory.scan.merchant" }]
+  },
   async ({ event, step }) => {
     // @ts-ignore
     const { userId } = event.data;
@@ -289,7 +317,15 @@ export const processMerchantInventory = inngest.createFunction(
         .eq("agent_type", "integrations")
         .single();
         
-      if (!invConfig || !keysData?.api_keys) return null;
+      if (!invConfig || !keysData?.api_keys) {
+        return {
+          shopifyUrl: null,
+          shopifyToken: null,
+          openaiKey: null,
+          threshold: 15,
+          forecastDays: 30
+        };
+      }
       
       return {
         shopifyUrl: keysData.api_keys.shopifyUrl,

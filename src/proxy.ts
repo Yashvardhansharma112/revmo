@@ -27,8 +27,8 @@ const webhookLimiter = redis ? new Ratelimit({
   analytics: true,
 }) : null;
 
-export async function middleware(request: NextRequest) {
-  const ip = request.ip ?? request.headers.get("x-forwarded-for") ?? "127.0.0.1";
+export async function proxy(request: NextRequest) {
+  const ip = (request as any).ip ?? request.headers.get("x-forwarded-for") ?? "127.0.0.1";
   const path = request.nextUrl.pathname;
 
   // We only rate limit the /api routes
