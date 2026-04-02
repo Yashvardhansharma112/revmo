@@ -99,7 +99,7 @@ export default function SignupPage() {
           <div className="w-10 h-10 rounded-xl gradient-bg flex items-center justify-center">
             <Zap className="w-5 h-5 text-white" />
           </div>
-          <span className="text-2xl font-extrabold">Revmo</span>
+          <span className="text-2xl font-extrabold">StorePilot</span>
         </Link>
 
         {/* Steps */}

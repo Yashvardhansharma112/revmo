@@ -59,7 +59,7 @@ export async function SubscriptionGuard({ children }: { children: React.ReactNod
           </p>
 
           <a 
-            href="mailto:your-email@example.com?subject=Revmo%20Subscription%20Request"
+            href="mailto:your-email@example.com?subject=StorePilot%20Subscription%20Request"
             className="block w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-lg font-bold py-4 px-6 rounded-xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)]"
           >
             Contact Us to Subscribe

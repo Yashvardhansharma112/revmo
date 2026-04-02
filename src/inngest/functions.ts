@@ -15,7 +15,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
  */
 export const recoverAbandonedCheckout = inngest.createFunction(
   { id: "recover-abandoned-checkout", name: "Recover Abandoned Checkout" },
-  { event: "revmo/checkout.abandoned" },
+  { event: "StorePilot/checkout.abandoned" },
   async ({ event, step }) => {
     // @ts-ignore
     const { checkoutId, phone, customerName, cartTotal, items, abandonUrl } = event.data;
@@ -100,7 +100,7 @@ export const recoverAbandonedCheckout = inngest.createFunction(
  */
 export const recoverViaWhatsApp = inngest.createFunction(
   { id: "recover-via-whatsapp", name: "Recover via WhatsApp" },
-  { event: "revmo/checkout.abandoned" },
+  { event: "StorePilot/checkout.abandoned" },
   async ({ event, step }) => {
     // @ts-ignore
     const { checkoutId, phone, customerName, cartTotal, items, abandonUrl } = event.data;
@@ -251,7 +251,7 @@ export const generateDailyInventoryReport = inngest.createFunction(
 
     // Fan-Out Architecture: trigger a specific process event for each active merchant
     const events = merchants.map(userId => ({
-      name: "revmo/inventory.scan.merchant",
+      name: "StorePilot/inventory.scan.merchant",
       data: { userId }
     }));
 
@@ -268,7 +268,7 @@ export const generateDailyInventoryReport = inngest.createFunction(
  */
 export const processMerchantInventory = inngest.createFunction(
   { id: "process-merchant-inventory", name: "Process Merchant Inventory" },
-  { event: "revmo/inventory.scan.merchant" },
+  { event: "StorePilot/inventory.scan.merchant" },
   async ({ event, step }) => {
     // @ts-ignore
     const { userId } = event.data;

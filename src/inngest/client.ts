@@ -11,12 +11,12 @@ type AbandonedCheckoutData = {
 };
 
 type Events = {
-  "revmo/checkout.abandoned": {
+  "StorePilot/checkout.abandoned": {
     data: AbandonedCheckoutData;
   };
 };
 
 export const inngest = new Inngest({
-  id: "revmo",
-  name: "Revmo.ai",
+  id: "StorePilot",
+  name: "StorePilot.ai",
 });

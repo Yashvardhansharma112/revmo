@@ -160,7 +160,7 @@ const howItWorks = [
   {
     step: "03",
     title: "Agents Run Automatically",
-    desc: "Shopify fires webhooks to Revmo on cart abandonment. Agents wake up, fetch your config, and take action — voice call, WhatsApp message, or inventory report.",
+    desc: "Shopify fires webhooks to StorePilot on cart abandonment. Agents wake up, fetch your config, and take action — voice call, WhatsApp message, or inventory report.",
     icon: Bot,
   },
 ];
@@ -205,7 +205,7 @@ export default function LandingPage() {
               <Zap className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-extrabold tracking-tight">
-              Revmo
+              StorePilot
             </span>
           </Link>
 
@@ -272,7 +272,7 @@ export default function LandingPage() {
             transition={{ duration: 0.7, delay: 0.2 }}
             className="text-lg md:text-xl text-[var(--color-text-secondary)] max-w-2xl mx-auto mb-10 leading-relaxed"
           >
-            Revmo connects 3 specialized AI agents to your Shopify store — recovering abandoned carts via WhatsApp and voice calls, and alerting you when inventory goes critical. You bring your API keys. We handle the orchestration.
+            StorePilot connects 3 specialized AI agents to your Shopify store — recovering abandoned carts via WhatsApp and voice calls, and alerting you when inventory goes critical. You bring your API keys. We handle the orchestration.
           </motion.p>
 
           {/* CTAs */}
@@ -330,7 +330,7 @@ export default function LandingPage() {
               custom={0}
               className="text-3xl md:text-4xl font-black tracking-tight mb-4"
             >
-              How Revmo works
+              How StorePilot works
             </motion.h2>
             <motion.p
               variants={fadeUp}
@@ -665,7 +665,7 @@ export default function LandingPage() {
               <div className="w-8 h-8 rounded-lg gradient-bg flex items-center justify-center">
                 <Zap className="w-4 h-4 text-white" />
               </div>
-              <span className="text-lg font-extrabold">Revmo</span>
+              <span className="text-lg font-extrabold">StorePilot</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-[var(--color-text-muted)]">
               <a href="#" className="hover:text-white transition-colors">
@@ -679,7 +679,7 @@ export default function LandingPage() {
               </a>
             </div>
             <p className="text-xs text-[var(--color-text-muted)]">
-              © 2026 Revmo.ai
+              © 2026 StorePilot
             </p>
           </div>
         </div>

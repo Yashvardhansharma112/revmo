@@ -2,7 +2,7 @@ import { SubscriptionGuard } from "@/components/ui/SubscriptionGuard";
 import WhatsAppAgentClient from "./client";
 
 export const metadata = {
-  title: "WhatsApp Nudge Agent | Revmo AI",
+  title: "WhatsApp Nudge Agent | StorePilot AI",
   description: "Configure your conversational WhatsApp agent.",
 };
 

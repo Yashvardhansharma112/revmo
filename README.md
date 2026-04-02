@@ -1,8 +1,8 @@
-# Revmo.ai
+# StorePilot.ai
 
 **The AI-Powered Abandoned Cart Recovery & Inventory Management Platform for Shopify Merchants.**
 
-Revmo is a multi-tenant SaaS platform that autonomously recovers lost revenue and optimizes inventory using three specialized AI agents — all configurable via a self-serve dashboard.
+StorePilot is a multi-tenant SaaS platform that autonomously recovers lost revenue and optimizes inventory using three specialized AI agents — all configurable via a self-serve dashboard.
 
 ---
 
@@ -48,8 +48,8 @@ Runs automatically every morning at 8 AM EST. Scans Shopify inventory, calculate
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/YOUR_USERNAME/revmo.git
-cd revmo
+git clone https://github.com/YOUR_USERNAME/StorePilot.git
+cd StorePilot
 npm install
 ```
 

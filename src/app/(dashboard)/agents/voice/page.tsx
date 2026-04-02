@@ -2,7 +2,7 @@ import { SubscriptionGuard } from "@/components/ui/SubscriptionGuard";
 import VoiceAgentClient from "./client";
 
 export const metadata = {
-  title: "Voice Agent Defaults | Revmo AI",
+  title: "Voice Agent Defaults | StorePilot AI",
   description: "Configure your Voice AI personas.",
 };
 

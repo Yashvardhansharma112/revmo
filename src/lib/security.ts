@@ -1,4 +1,4 @@
-// Revmo.ai Global Security Enforcers
+// StorePilot.ai Global Security Enforcers
 // Handles Prompt Injection Protection and Edge Networking Abuse
 
 // -----------------------------------------------------

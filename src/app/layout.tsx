@@ -11,35 +11,35 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Revmo — AI Agents That Sell For You",
-    template: "%s | Revmo",
+    default: "StorePilot — AI Agents for Shopify Automation",
+    template: "%s | StorePilot",
   },
   description:
-    "Revmo is the AI-powered ecommerce platform with Inventory Optimizer, WhatsApp Nudge, and Voice Closer agents that automate your D2C store's growth.",
+    "StorePilot connects 3 AI agents to your Shopify store — recovering abandoned carts via WhatsApp and voice, and scanning inventory daily.",
   keywords: [
     "AI ecommerce",
     "inventory optimization",
-    "whatsapp marketing",
+    "whatsapp cart recovery",
     "voice AI sales",
-    "D2C automation",
+    "shopify automation",
     "shopify agent",
-    "woocommerce AI",
+    "AI agents India",
   ],
-  authors: [{ name: "Revmo" }],
+  authors: [{ name: "StorePilot" }],
   openGraph: {
-    title: "Revmo — AI Agents That Sell For You",
+    title: "StorePilot — AI Agents for Shopify Automation",
     description:
-      "3 specialized AI agents that optimize inventory, nudge customers on WhatsApp, and close deals by voice.",
-    url: "https://revmo.ai",
-    siteName: "Revmo",
+      "3 AI agents that recover abandoned carts, optimize inventory, and close deals — all connected to your Shopify store.",
+    url: "https://storepilot.vercel.app",
+    siteName: "StorePilot",
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Revmo — AI Agents That Sell For You",
+    title: "StorePilot — AI Agents for Shopify Automation",
     description:
-      "3 specialized AI agents that optimize inventory, nudge customers on WhatsApp, and close deals by voice.",
+      "3 AI agents that recover abandoned carts, optimize inventory, and close deals — all connected to your Shopify store.",
   },
   robots: {
     index: true,

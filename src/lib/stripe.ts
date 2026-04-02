@@ -10,7 +10,7 @@ export const stripe = new Stripe(secretKey, {
   // Use a generic recent API version; adjust as needed for strict typing.
   apiVersion: "2024-06-20" as any, 
   appInfo: {
-    name: 'Revmo.ai',
+    name: 'StorePilot.ai',
     version: '0.1.0',
   },
 });

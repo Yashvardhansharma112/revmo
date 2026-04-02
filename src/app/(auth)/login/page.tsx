@@ -68,14 +68,14 @@ export default function LoginPage() {
           <div className="w-10 h-10 rounded-xl gradient-bg flex items-center justify-center">
             <Zap className="w-5 h-5 text-white" />
           </div>
-          <span className="text-2xl font-extrabold">Revmo</span>
+          <span className="text-2xl font-extrabold">StorePilot</span>
         </Link>
 
         {/* Card */}
         <div className="glass-card p-8">
           <h1 className="text-2xl font-bold text-center mb-2">Welcome back</h1>
           <p className="text-sm text-[var(--color-text-muted)] text-center mb-8">
-            Log in to your Revmo dashboard
+            Log in to your StorePilot dashboard
           </p>
 
           {/* Google Login */}

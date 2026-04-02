@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       }
 
       await inngest.send({
-        name: "revmo/checkout.abandoned",
+        name: "StorePilot/checkout.abandoned",
         data: {
           shopDomain: shopDomain || "unknown",
           checkoutId: String(checkoutId),
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
         },
       });
 
-      return NextResponse.json({ message: "Dispatched revmo/checkout.abandoned to Inngest queue." });
+      return NextResponse.json({ message: "Dispatched StorePilot/checkout.abandoned to Inngest queue." });
     }
 
     return NextResponse.json({ message: `Received ${topic} but unhandled.` });

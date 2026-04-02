@@ -87,7 +87,7 @@ export default function DashboardLayout({
           </div>
           {!collapsed && (
             <span className="text-lg font-extrabold tracking-tight">
-              Revmo
+              StorePilot
             </span>
           )}
         </div>
