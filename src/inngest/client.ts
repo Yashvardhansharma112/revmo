@@ -19,4 +19,5 @@ type Events = {
 export const inngest = new Inngest({
   id: "StorePilot",
   name: "StorePilot.ai",
+  eventKey: process.env.INNGEST_EVENT_KEY,
 });

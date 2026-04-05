@@ -41,6 +41,7 @@ export async function POST(req: Request) {
         user_id: user.id,
         agent_type: "inventory",
         settings: settings, 
+        is_active: settings.isActive || false,
         updated_at: new Date().toISOString(),
       }, {
         onConflict: "user_id, agent_type"

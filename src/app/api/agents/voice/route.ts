@@ -52,6 +52,16 @@ export async function POST(req: Request) {
     .single();
 
   if (error) {
+    console.error("Voice config save error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (error) {
+    console.error("Voice config save error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 

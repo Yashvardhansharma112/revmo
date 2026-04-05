@@ -5,8 +5,8 @@ import { sanitizeInput } from "@/lib/security";
 
 // Initialize a generic Supabase admin client for background jobs
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-// Should be a service role key. For dev, NEXT_PUBLIC_SUPABASE_ANON_KEY might work if RLS allows it.
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""; 
+// Use service role key to bypass RLS in background jobs
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""; 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 /**

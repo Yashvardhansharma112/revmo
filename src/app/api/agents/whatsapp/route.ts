@@ -38,6 +38,7 @@ export async function POST(request: Request) {
         user_id: user.id,
         agent_type: "whatsapp",
         settings, // Stored securely as JSON
+        is_active: settings.isActive || false,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id, agent_type" }
