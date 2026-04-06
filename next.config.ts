@@ -47,23 +47,8 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // Redirect HTTP to HTTPS in production
-  async redirects() {
-    return [
-      {
-        source: "/((?!api|auth|webhooks).*)",
-        destination: "/:path*",
-        permanent: false,
-        has: [
-          {
-            type: "header",
-            key: "x-forwarded-proto",
-            value: "http",
-          },
-        ],
-      },
-    ];
-  },
+  // Note: HTTP to HTTPS redirect is handled by Vercel platform automatically
+  // No need to configure it here - it can cause "Invalid redirect found" errors
 };
 
 export default nextConfig;
