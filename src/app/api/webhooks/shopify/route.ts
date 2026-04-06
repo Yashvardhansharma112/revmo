@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { inngest } from "@/inngest/client";
-import { rateLimit } from "@/lib/security";
+import { checkRateLimit } from "@/lib/security";
 
 export async function POST(req: Request) {
   try {
@@ -14,11 +14,14 @@ export async function POST(req: Request) {
     const ip = req.headers.get("x-forwarded-for") || "unknown_ip";
     
     // Webhook Limiter: 5 maximum hits per 10 seconds per IP, blocks DDoS abuse
-    const { success, remaining, reset } = rateLimit(`webhook_${ip}`, 5, 10000);
-    
-    if (!success) {
+    // FIXED: Use async rate limiter instead of sync one
+    const rateLimitResult = await checkRateLimit("webhook", ip);
+    if (!rateLimitResult.success) {
       console.warn(`[Security] Shopify Webhook throttled IP: ${ip}`);
-      return NextResponse.json({ error: "Too Many Requests" }, { status: 429, headers: { 'X-RateLimit-Reset': reset.toString() } });
+      return NextResponse.json(
+        { error: "Too Many Requests" },
+        { status: 429, headers: { 'X-RateLimit-Reset': String(rateLimitResult.reset) } }
+      );
     }
 
     // In a production app, the SHOPIFY_WEBHOOK_SECRET should be securely 

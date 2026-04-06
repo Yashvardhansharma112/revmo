@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { encrypt, decrypt, maskKey } from "@/lib/encryption";
-import { rateLimit } from "@/lib/security";
+import { checkRateLimit } from "@/lib/security";
 
 export async function GET() {
   const supabase = await createClient();
@@ -45,9 +45,12 @@ export async function GET() {
 export async function POST(req: Request) {
   // Rate limit: 20 per minute based on IP to stop credential stuffing
   const ip = req.headers.get("x-forwarded-for") || "unknown_ip";
-  const { success, reset } = rateLimit(`integrations_${ip}`, 20, 60000);
-  if (!success) {
-    return NextResponse.json({ error: "Rate Limit Exceeded" }, { status: 429, headers: { 'X-RateLimit-Reset': reset.toString() } });
+  const rateLimitResult = await checkRateLimit("api", ip);
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: "Rate Limit Exceeded" },
+      { status: 429, headers: { 'X-RateLimit-Reset': String(rateLimitResult.reset) } }
+    );
   }
 
   const supabase = await createClient();
@@ -63,6 +66,7 @@ export async function POST(req: Request) {
 
   // We must retrieve the existing row so we can avoid overwriting keys
   // if the user sent back a masked key ('****').
+  // FIXED: Added user_id filter to prevent IDOR - only fetch THIS user's keys
   const { data: existingData } = await supabase
     .from("agent_configurations")
     .select("api_keys")
