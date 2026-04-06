@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/security";
+import { logAuthEvent, logApiError, logRateLimitEvent } from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
@@ -10,6 +11,7 @@ export async function POST(request: Request) {
     // Rate limit: 5 login attempts per 15 minutes per IP
     const rateLimitResult = await checkRateLimit("login", ip);
     if (!rateLimitResult.success) {
+      logRateLimitEvent(ip, "/api/auth/login", rateLimitResult.limit, 900000);
       return NextResponse.json(
         { error: "Too many login attempts. Please try again later." },
         { 
@@ -49,8 +51,8 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      // Log internally for security monitoring
-      console.warn(`[Auth] Failed login attempt for: ${email}`);
+      // Log failed authentication attempt
+      logAuthEvent("login_failed", email, false, ip, { reason: error.message });
       
       // Never expose whether email exists or specific error details
       return NextResponse.json(
@@ -61,11 +63,15 @@ export async function POST(request: Request) {
 
     // Check if user's email is confirmed
     if (!data.user?.email_confirmed_at) {
+      logAuthEvent("login_failed", email, false, ip, { reason: "email_not_verified" });
       return NextResponse.json(
         { error: "Please verify your email before logging in", needsVerification: true },
         { status: 403 }
       );
     }
+
+    // Log successful authentication
+    logAuthEvent("login_success", email, true, ip, { userId: data.user.id });
 
     // Successful login - return minimal user info
     return NextResponse.json({
@@ -75,7 +81,8 @@ export async function POST(request: Request) {
         email: data.user.email,
       },
     });
-  } catch {
+  } catch (err) {
+    logApiError("/api/auth/login", err as Error);
     return NextResponse.json(
       { error: "An unexpected error occurred" },
       { status: 500 }

@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Enforce HTTPS in production
   async headers() {
     return [
       {
@@ -11,26 +12,53 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           // Prevent MIME type sniffing
           { key: "X-Content-Type-Options", value: "nosniff" },
-          // Enable HSTS in production
-          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+          // Enable HSTS with upgrade of insecure requests
+          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; upgrade-insecure-requests" },
           // Control referrer information
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           // Restrict browser features
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-          // Content Security Policy - restrict resource loading
+          // Content Security Policy - strict restrictive policy
           {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.google.com https://*.gstatic.com",
+              // Restrict scripts - only self and necessary origins
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              // Styles only from self
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https:",
+              // Images from self and data URIs only
+              "img-src 'self' data: blob:",
+              // Fonts from self only
               "font-src 'self' data:",
-              "connect-src 'self' https://*.supabase.co https://*.inngest.co https://*.upstash.io https://api.openai.com https://api.bland.ai https://api.twilio.com wss://*.supabase.co",
+              // Connect to specific allowed APIs only
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+              // Prevent all framing
               "frame-ancestors 'none'",
+              // Form actions to self only
               "form-action 'self'",
+              // Base URI restricted
               "base-uri 'self'",
+              // Prevent object-src (Flash etc)
+              "object-src 'none'",
             ].join("; "),
+          },
+        ],
+      },
+    ];
+  },
+  // Redirect HTTP to HTTPS in production
+  async redirects() {
+    return [
+      {
+        source: "/((?!api|auth|webhooks).*)",
+        destination: "/:path*",
+        permanent: false,
+        has: [
+          {
+            type: "header",
+            key: "x-forwarded-proto",
+            value: "http",
           },
         ],
       },

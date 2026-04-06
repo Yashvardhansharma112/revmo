@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, sanitizeInput } from "@/lib/security";
+import { logAuthEvent, logApiError, logRateLimitEvent } from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
@@ -10,6 +11,7 @@ export async function POST(request: Request) {
     // Rate limit: 3 signups per hour per IP
     const rateLimitResult = await checkRateLimit("signup", ip);
     if (!rateLimitResult.success) {
+      logRateLimitEvent(ip, "/api/auth/signup", rateLimitResult.limit, 3600000);
       return NextResponse.json(
         { error: "Too many signup attempts. Please try again later." },
         { status: 429 }
@@ -78,12 +80,15 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      console.warn(`[Auth] Failed signup for: ${email}`, error.message);
+      logAuthEvent("signup", email, false, ip, { reason: error.message });
       return NextResponse.json(
         { error: "Signup failed. Please try again." },
         { status: 400 }
       );
     }
+
+    // Log successful signup
+    logAuthEvent("signup", email, true, ip, { userId: data.user?.id, plan: selectedPlan });
 
     // Return success - user needs to verify email
     return NextResponse.json({
@@ -91,7 +96,8 @@ export async function POST(request: Request) {
       needsEmailVerification: true,
       message: "Account created. Please check your email to verify your account.",
     });
-  } catch {
+  } catch (err) {
+    logApiError("/api/auth/signup", err as Error);
     return NextResponse.json(
       { error: "An unexpected error occurred" },
       { status: 500 }
