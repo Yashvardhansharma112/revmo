@@ -83,8 +83,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Validate persona - must be one of allowed values
-  const validPersonas = ["sarah", "maya", "julia", "adam", "classic"];
+  // Validate persona - must be one of allowed values (matching UI)
+  const validPersonas = ["marcus", "sarah", "arthur", "maya"];
   const personaValidation = validateString(body?.persona, {
     minLength: 1,
     maxLength: 50,

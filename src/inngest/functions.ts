@@ -353,8 +353,8 @@ export const processMerchantInventory = inngest.createFunction(
       
       return {
         shopifyUrl: keysData.api_keys.shopifyUrl,
-        shopifyToken: keysData.api_keys.shopifyToken, // Already decrypted via our UI logic previously? Or needs extraction
-        openaiKey: keysData.api_keys.openaiKey,
+        shopifyToken: keysData.api_keys.shopifyToken ? decrypt(keysData.api_keys.shopifyToken) : null,
+        openaiKey: keysData.api_keys.openaiKey ? decrypt(keysData.api_keys.openaiKey) : null,
         threshold: parseInt(invConfig.settings?.lowStockThreshold || "15"),
         forecastDays: parseInt(invConfig.settings?.forecastDays || "30")
       };
