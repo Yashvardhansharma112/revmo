@@ -11,7 +11,7 @@ export default function IntegrationsPage() {
     openaiKey: "",
     twilioSid: "",
     twilioToken: "",
-    blandaiKey: "",
+    bland: "",  // Note: backend expects "bland" not "blandaiKey"
   });
 
   const [loading, setLoading] = useState(true);
@@ -25,14 +25,14 @@ export default function IntegrationsPage() {
         const res = await fetch("/api/agents/integrations");
         if (res.ok) {
           const { data } = await res.json();
-          if (data && data.api_keys) {
+            if (data && data.api_keys) {
             setKeys({
               shopifyUrl: data.api_keys.shopifyUrl || "",
               shopifyToken: data.api_keys.shopifyToken || "",
               openaiKey: data.api_keys.openaiKey || "",
               twilioSid: data.api_keys.twilioSid || "",
               twilioToken: data.api_keys.twilioToken || "",
-              blandaiKey: data.api_keys.blandaiKey || "",
+              bland: data.api_keys.bland || "",  // Backend uses "bland" key
             });
           }
         }
@@ -214,8 +214,8 @@ export default function IntegrationsPage() {
                   type="password"
                   placeholder="bland_..."
                   className="w-full bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.08)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--color-accent)] transition-colors pr-10"
-                  value={keys.blandaiKey}
-                  onChange={(e) => setKeys({ ...keys, blandaiKey: e.target.value })}
+                  value={keys.bland}
+                  onChange={(e) => setKeys({ ...keys, bland: e.target.value })}
                 />
                 <Key className="w-4 h-4 text-[var(--color-text-muted)] absolute right-3 top-3.5" />
               </div>
