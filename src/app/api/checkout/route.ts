@@ -37,6 +37,23 @@ export async function POST(req: Request) {
       );
     }
 
+    // Parse and validate request body (empty body expected, but validate anyway)
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      // Empty body is acceptable for this endpoint
+      body = {};
+    }
+
+    // Ensure no unexpected data is sent
+    if (Object.keys(body).length > 0) {
+      return NextResponse.json(
+        { error: "Invalid request" },
+        { status: 400 }
+      );
+    }
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 

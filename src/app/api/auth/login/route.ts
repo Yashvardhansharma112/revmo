@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/security";
 import { logAuthEvent, logApiError, logRateLimitEvent } from "@/lib/logger";
+import { validateEmail, validateString, validateApiInput } from "@/lib/validation";
 
 export async function POST(request: Request) {
   try {
@@ -25,34 +26,47 @@ export async function POST(request: Request) {
       );
     }
 
-    const { email, password } = await request.json();
-
-    // Validate input
-    if (!email || !password) {
+    // Parse and validate request body
+    let body;
+    try {
+      body = await request.json();
+    } catch {
       return NextResponse.json(
-        { error: "Email and password are required" },
+        { error: "Invalid JSON body" },
         { status: 400 }
       );
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    // Validate inputs with strict validation
+    const emailValidation = validateEmail(body?.email);
+    const passwordValidation = validateString(body?.password, {
+      minLength: 1,
+      maxLength: 128,
+    });
+
+    if (!emailValidation) {
       return NextResponse.json(
-        { error: "Invalid email format" },
+        { error: "Valid email is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!passwordValidation) {
+      return NextResponse.json(
+        { error: "Password is required" },
         { status: 400 }
       );
     }
 
     const supabase = await createClient();
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.toLowerCase().trim(),
-      password,
+      email: emailValidation,
+      password: passwordValidation,
     });
 
     if (error) {
       // Log failed authentication attempt
-      logAuthEvent("login_failed", email, false, ip, { reason: error.message });
+      logAuthEvent("login_failed", emailValidation, false, ip, { reason: error.message });
       
       // Never expose whether email exists or specific error details
       return NextResponse.json(
@@ -63,7 +77,7 @@ export async function POST(request: Request) {
 
     // Check if user's email is confirmed
     if (!data.user?.email_confirmed_at) {
-      logAuthEvent("login_failed", email, false, ip, { reason: "email_not_verified" });
+      logAuthEvent("login_failed", emailValidation, false, ip, { reason: "email_not_verified" });
       return NextResponse.json(
         { error: "Please verify your email before logging in", needsVerification: true },
         { status: 403 }
@@ -71,7 +85,7 @@ export async function POST(request: Request) {
     }
 
     // Log successful authentication
-    logAuthEvent("login_success", email, true, ip, { userId: data.user.id });
+    logAuthEvent("login_success", emailValidation, true, ip, { userId: data.user.id });
 
     // Successful login - return minimal user info
     return NextResponse.json({

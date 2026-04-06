@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, detectBot } from "@/lib/security";
 import { logApiError } from "@/lib/logger";
+import { validateString, validateJsonObject } from "@/lib/validation";
 
 export async function GET(request: Request) {
   // Bot detection
@@ -63,6 +64,17 @@ export async function POST(req: Request) {
     }
   }
 
+  // Parse and validate request body
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON body" },
+      { status: 400 }
+    );
+  }
+
   const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -71,8 +83,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
-  const { persona, script } = body;
+  // Validate persona - must be one of allowed values
+  const validPersonas = ["sarah", "maya", "julia", "adam", "classic"];
+  const personaValidation = validateString(body?.persona, {
+    minLength: 1,
+    maxLength: 50,
+  });
+  
+  if (!personaValidation || !validPersonas.includes(personaValidation)) {
+    return NextResponse.json(
+      { error: `Persona must be one of: ${validPersonas.join(", ")}` },
+      { status: 400 }
+    );
+  }
+
+  // Validate script - max 10000 characters
+  const scriptValidation = validateString(body?.script, {
+    maxLength: 10000,
+  });
 
   const { data, error } = await supabase
     .from("agent_configurations")
@@ -80,7 +108,7 @@ export async function POST(req: Request) {
       {
         user_id: user.id,
         agent_type: "voice",
-        settings: { persona, script },
+        settings: { persona: personaValidation, script: scriptValidation || "" },
         is_active: true,
         updated_at: new Date().toISOString(),
       },
@@ -90,6 +118,7 @@ export async function POST(req: Request) {
     .single();
 
   if (error) {
+    logApiError("/api/agents/voice", error, user.id);
     console.error("Voice config save error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

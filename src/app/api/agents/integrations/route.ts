@@ -3,6 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { encrypt, decrypt, maskKey } from "@/lib/encryption";
 import { checkRateLimit, detectBot } from "@/lib/security";
 import { logApiError } from "@/lib/logger";
+import { validateJsonObject, validateString } from "@/lib/validation";
+
+// Allowed API key providers
+const ALLOWED_PROVIDERS = [
+  "openaiKey", "bland", "twilioSid", "twilioToken", "shopifyUrl", "shopifyToken"
+];
 
 export async function GET(request: Request) {
   // Bot detection
@@ -66,6 +72,17 @@ export async function POST(req: Request) {
     );
   }
 
+  // Parse and validate request body
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON body" },
+      { status: 400 }
+    );
+  }
+
   const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -74,12 +91,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
-  const { api_keys } = body;
+  // Validate api_keys object with strict schema
+  const apiKeysValidation = validateJsonObject(body?.api_keys, undefined, 3);
+
+  if (!apiKeysValidation) {
+    return NextResponse.json(
+      { error: "Invalid API keys format" },
+      { status: 400 }
+    );
+  }
 
   // We must retrieve the existing row so we can avoid overwriting keys
   // if the user sent back a masked key ('****').
-  // FIXED: Added user_id filter to prevent IDOR - only fetch THIS user's keys
   const { data: existingData } = await supabase
     .from("agent_configurations")
     .select("api_keys")
@@ -90,16 +113,30 @@ export async function POST(req: Request) {
   const existingApiKeys = (existingData?.api_keys as Record<string, string>) || {};
   
   const encryptedApiKeys: Record<string, string> = {};
-  for (const [provider, rawKey] of Object.entries((api_keys || {}) as Record<string, string>)) {
+  
+  // Only allow specific providers and validate each key
+  for (const [provider, rawKey] of Object.entries(apiKeysValidation)) {
+    // Only process allowed providers
+    if (!ALLOWED_PROVIDERS.includes(provider)) {
+      continue;
+    }
+    
     if (!rawKey) continue;
+    
+    // Validate the key is a string
+    const keyString = validateString(rawKey, {
+      maxLength: 500, // reasonable max for API keys
+    });
+    
+    if (!keyString) continue;
     
     // If key contains ****, it means it's heavily masked and the user didn't change it.
     // Retain the existing encrypted string.
-    if (rawKey.includes('****')) {
-      encryptedApiKeys[provider] = existingApiKeys[provider] || rawKey;
+    if (keyString.includes('****')) {
+      encryptedApiKeys[provider] = existingApiKeys[provider] || keyString;
     } else {
       // It's a brand new raw key from user, encrypt it.
-      encryptedApiKeys[provider] = encrypt(rawKey);
+      encryptedApiKeys[provider] = encrypt(keyString);
     }
   }
 

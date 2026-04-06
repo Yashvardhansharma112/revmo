@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, detectBot } from "@/lib/security";
 import { logApiError } from "@/lib/logger";
+import { validateJsonObject, validateString, validateInteger } from "@/lib/validation";
 
 export async function GET(request: Request) {
   // Bot detection
@@ -59,6 +60,17 @@ export async function POST(request: Request) {
     }
   }
 
+  // Parse and validate request body
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON body" },
+      { status: 400 }
+    );
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -66,7 +78,56 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { settings } = await request.json();
+  // Validate settings object with strict schema
+  const settingsValidation = validateJsonObject(body?.settings, undefined, 5);
+
+  if (!settingsValidation) {
+    return NextResponse.json(
+      { error: "Invalid settings format" },
+      { status: 400 }
+    );
+  }
+
+  // Additional field-specific validation
+  const validatedSettings: Record<string, unknown> = {};
+
+  if (settingsValidation.senderId) {
+    const senderId = validateString(settingsValidation.senderId, {
+      minLength: 1,
+      maxLength: 50,
+      pattern: /^whatsapp:\+?[1-9]\d{1,14}$/,
+    });
+    if (!senderId) {
+      return NextResponse.json(
+        { error: "Invalid sender ID format" },
+        { status: 400 }
+      );
+    }
+    validatedSettings.senderId = senderId;
+  }
+
+  if (settingsValidation.prompt) {
+    const prompt = validateString(settingsValidation.prompt, {
+      maxLength: 5000,
+    });
+    validatedSettings.prompt = prompt;
+  }
+
+  if (settingsValidation.delayMinutes !== undefined) {
+    const delay = validateInteger(settingsValidation.delayMinutes, 0, 1440);
+    if (delay === null) {
+      return NextResponse.json(
+        { error: "Delay must be 0-1440 minutes" },
+        { status: 400 }
+      );
+    }
+    validatedSettings.delayMinutes = delay;
+  }
+
+  // Validate isActive is boolean
+  if (settingsValidation.isActive !== undefined) {
+    validatedSettings.isActive = Boolean(settingsValidation.isActive);
+  }
 
   // Upsert the new config
   const { error } = await supabase
@@ -75,17 +136,18 @@ export async function POST(request: Request) {
       {
         user_id: user.id,
         agent_type: "whatsapp",
-        settings, // Stored securely as JSON
-        is_active: settings.isActive || false,
+        settings: validatedSettings,
+        is_active: validatedSettings.isActive || false,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id, agent_type" }
     );
 
   if (error) {
+    logApiError("/api/agents/whatsapp", error, user.id);
     console.error("Failed to save WhatsApp config", error);
     return NextResponse.json({ error: "Failed to save" }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, settings });
+  return NextResponse.json({ success: true, settings: validatedSettings });
 }

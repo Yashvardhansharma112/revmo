@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, sanitizeInput } from "@/lib/security";
 import { logAuthEvent, logApiError, logRateLimitEvent } from "@/lib/logger";
+import { validateEmail, validatePassword, validateString } from "@/lib/validation";
 
 export async function POST(request: Request) {
   try {
@@ -18,69 +19,65 @@ export async function POST(request: Request) {
       );
     }
 
-    const { email, password, name, plan } = await request.json();
-
-    // Validate required fields
-    if (!email || !password || !name) {
+    // Parse and validate request body
+    let body;
+    try {
+      body = await request.json();
+    } catch {
       return NextResponse.json(
-        { error: "Email, password, and name are required" },
+        { error: "Invalid JSON body" },
         { status: 400 }
       );
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    // Validate all inputs with strict validation
+    const emailValidation = validateEmail(body?.email);
+    const passwordValidation = validatePassword(body?.password);
+    const nameValidation = validateString(body?.name, {
+      minLength: 2,
+      maxLength: 100,
+      stripHtml: true,
+    });
+
+    if (!emailValidation) {
       return NextResponse.json(
-        { error: "Invalid email format" },
+        { error: "Valid email is required" },
         { status: 400 }
       );
     }
 
-    // Server-side password strength enforcement
-    const passwordErrors: string[] = [];
-    if (password.length < 12) passwordErrors.push("at least 12 characters");
-    if (!/[A-Z]/.test(password)) passwordErrors.push("one uppercase letter");
-    if (!/[a-z]/.test(password)) passwordErrors.push("one lowercase letter");
-    if (!/[0-9]/.test(password)) passwordErrors.push("one number");
-    if (!/[^A-Za-z0-9]/.test(password)) passwordErrors.push("one special character");
-    
-    if (passwordErrors.length > 0) {
+    if (!passwordValidation) {
       return NextResponse.json(
-        { error: `Password must contain: ${passwordErrors.join(", ")}` },
+        { error: "Password must be at least 12 characters with uppercase, lowercase, number, and special character" },
         { status: 400 }
       );
     }
 
-    // Sanitize name to prevent injection in user metadata
-    const sanitizedName = sanitizeInput(name, 100);
-    if (!sanitizedName || sanitizedName.length < 2) {
+    if (!nameValidation) {
       return NextResponse.json(
-        { error: "Name must be at least 2 characters" },
+        { error: "Name must be 2-100 characters" },
         { status: 400 }
       );
     }
 
-    // Validate plan
+    // Validate plan if provided
     const validPlans = ["starter", "growth", "scale"];
-    const selectedPlan = validPlans.includes(plan) ? plan : "growth";
+    const selectedPlan = validPlans.includes(body?.plan) ? body.plan : "growth";
 
     const supabase = await createClient();
     const { data, error } = await supabase.auth.signUp({
-      email: email.toLowerCase().trim(),
-      password,
+      email: emailValidation,
+      password: passwordValidation,
       options: {
         data: {
-          name: sanitizedName,
+          name: nameValidation,
           plan: selectedPlan,
         },
-        // Supabase will send the confirmation email automatically
-        // if email confirmation is enabled in the dashboard
       },
     });
 
     if (error) {
-      logAuthEvent("signup", email, false, ip, { reason: error.message });
+      logAuthEvent("signup", emailValidation, false, ip, { reason: error.message });
       return NextResponse.json(
         { error: "Signup failed. Please try again." },
         { status: 400 }
@@ -88,7 +85,7 @@ export async function POST(request: Request) {
     }
 
     // Log successful signup
-    logAuthEvent("signup", email, true, ip, { userId: data.user?.id, plan: selectedPlan });
+    logAuthEvent("signup", emailValidation, true, ip, { userId: data.user?.id, plan: selectedPlan });
 
     // Return success - user needs to verify email
     return NextResponse.json({

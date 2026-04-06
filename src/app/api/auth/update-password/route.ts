@@ -1,28 +1,27 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { validatePassword } from "@/lib/validation";
+import { logApiError } from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
-    const { password } = await request.json();
-
-    if (!password) {
+    // Parse and validate request body
+    let body;
+    try {
+      body = await request.json();
+    } catch {
       return NextResponse.json(
-        { error: "New password is required" },
+        { error: "Invalid JSON body" },
         { status: 400 }
       );
     }
 
-    // Server-side password strength enforcement
-    const passwordErrors: string[] = [];
-    if (password.length < 12) passwordErrors.push("at least 12 characters");
-    if (!/[A-Z]/.test(password)) passwordErrors.push("one uppercase letter");
-    if (!/[a-z]/.test(password)) passwordErrors.push("one lowercase letter");
-    if (!/[0-9]/.test(password)) passwordErrors.push("one number");
-    if (!/[^A-Za-z0-9]/.test(password)) passwordErrors.push("one special character");
-    
-    if (passwordErrors.length > 0) {
+    // Validate password with strict validation
+    const passwordValidation = validatePassword(body?.password);
+
+    if (!passwordValidation) {
       return NextResponse.json(
-        { error: `Password must contain: ${passwordErrors.join(", ")}` },
+        { error: "Password must be at least 12 characters with uppercase, lowercase, number, and special character" },
         { status: 400 }
       );
     }
@@ -39,7 +38,7 @@ export async function POST(request: Request) {
     }
 
     const { error } = await supabase.auth.updateUser({
-      password,
+      password: passwordValidation,
     });
 
     if (error) {
@@ -54,7 +53,8 @@ export async function POST(request: Request) {
       success: true,
       message: "Password updated successfully.",
     });
-  } catch {
+  } catch (err) {
+    logApiError("/api/auth/update-password", err as Error);
     return NextResponse.json(
       { error: "An unexpected error occurred" },
       { status: 500 }
