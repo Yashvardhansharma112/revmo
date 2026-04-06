@@ -246,7 +246,7 @@ export async function checkRateLimit(
     success,
     limit,
     remaining,
-    reset: parseInt(reset),
+    reset: typeof reset === "string" ? parseInt(reset) : reset,
   };
 }
 

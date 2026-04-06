@@ -66,37 +66,3 @@ export async function updateSession(request: NextRequest) {
 
   return supabaseResponse;
 }
-  );
-
-  // Refresh the auth session
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Protected routes — redirect to login if not authenticated
-  const protectedPaths = ["/dashboard", "/agents", "/inbox", "/settings", "/analytics", "/customers", "/campaigns", "/automation", "/integrations"];
-  const isProtected = protectedPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
-  );
-
-  if (isProtected && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("next", request.nextUrl.pathname);
-    return NextResponse.redirect(url);
-  }
-
-  // Redirect logged-in users from auth pages to dashboard
-  const authPaths = ["/login", "/signup"];
-  const isAuthPage = authPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
-  );
-
-  if (isAuthPage && user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
-  }
-
-  return supabaseResponse;
-}
