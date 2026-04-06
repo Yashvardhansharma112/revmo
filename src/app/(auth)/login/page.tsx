@@ -1,19 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Zap, Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Check for URL-based error messages (from redirects)
+  useEffect(() => {
+    const urlError = searchParams.get("error");
+    if (urlError === "auth_failed") {
+      setError("Authentication failed. Please try again.");
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,17 +30,27 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      // Use server-side API with rate limiting instead of direct Supabase call
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (authError) {
-        setError("Invalid email or password");
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Login failed");
         return;
       }
 
+      // Check if email verification is needed
+      if (data.needsVerification) {
+        router.push("/verify-email?email=" + encodeURIComponent(email));
+        return;
+      }
+
+      // Successful login - refresh session and redirect
       router.push("/dashboard");
       router.refresh();
     } catch {
@@ -39,6 +58,16 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleLogin = async () => {
+    const supabase = createClient();
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
   };
 
   const handleGoogleLogin = async () => {
@@ -164,6 +193,13 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          {/* Forgot Password Link */}
+          <div className="mt-4 text-center">
+            <Link href="/reset-password" className="text-xs text-[var(--color-accent)] hover:underline font-medium cursor-pointer">
+              Forgot your password?
+            </Link>
+          </div>
         </div>
 
         <p className="text-sm text-[var(--color-text-muted)] text-center mt-6">

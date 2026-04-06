@@ -41,33 +41,37 @@ export default function SignupPage() {
     e.preventDefault();
     setError("");
 
+    // Client-side password check (server will also validate)
     if (password.length < 12) {
       setError("Password must be at least 12 characters");
+      return;
+    }
+
+    // Require stronger passwords (score >= 3 = at least Good)
+    if (passwordStrength < 3) {
+      setError("Password is too weak. Add uppercase, numbers, or special characters.");
       return;
     }
 
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const { error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-            plan: selectedPlan,
-          },
-        },
+      // Use server-side API with rate limiting, password validation, and email verification
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, name, plan: selectedPlan }),
       });
 
-      if (authError) {
-        setError(authError.message);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Signup failed");
         return;
       }
 
-      router.push("/dashboard");
-      router.refresh();
+      // Redirect to email verification page
+      router.push("/verify-email?email=" + encodeURIComponent(email));
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

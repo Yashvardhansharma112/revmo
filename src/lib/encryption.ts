@@ -14,11 +14,13 @@ function getKey(): Buffer {
     return Buffer.alloc(32, "dev-fallback-key-do-not-use-prod!"); // 32 byte fallback
   }
   
-  if (key.length !== 32) {
-    throw new Error('ENCRYPTION_KEY must be exactly 32 bytes long');
+  // Check byte length, not character length (UTF-8 multi-byte chars)
+  const keyBuffer = Buffer.from(key, 'utf8');
+  if (keyBuffer.length !== 32) {
+    throw new Error(`ENCRYPTION_KEY must be exactly 32 bytes long, got ${keyBuffer.length} bytes`);
   }
 
-  return Buffer.from(key, 'utf8');
+  return keyBuffer;
 }
 
 /**
