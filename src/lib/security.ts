@@ -19,7 +19,54 @@ export function sanitizeInput(input: string | undefined | null, maxLength: numbe
 }
 
 // -----------------------------------------------------
-// 2. Upstash Redis Rate Limiter (Production-Grade)
+// 2. Bot Detection (Simple heuristic-based)
+// -----------------------------------------------------
+
+interface BotDetectionResult {
+  isBot: boolean;
+  reason?: string;
+}
+
+export function detectBot(request: Request): BotDetectionResult {
+  const userAgent = request.headers.get("user-agent") || "";
+  const accept = request.headers.get("accept") || "";
+  
+  // Check for common bot patterns in User-Agent
+  const botPatterns = [
+    /bot/i, /crawler/i, /spider/i, /scrap/i, /curl/i, /wget/i,
+    /python/i, /java/i, /go-http/i, /fetch/i, /headless/i,
+    /puppeteer/i, /selenium/i, /playwright/i, /normbot/i,
+  ];
+  
+  for (const pattern of botPatterns) {
+    if (pattern.test(userAgent)) {
+      // Allow legitimate bots with proper identification
+      if (/googlebot|bingbot|yandex/i.test(userAgent)) {
+        return { isBot: false }; // Allow search engine bots
+      }
+      return { isBot: true, reason: `Bot user-agent detected: ${userAgent.substring(0, 50)}` };
+    }
+  }
+  
+  // Check for missing Accept header (unusual for browsers)
+  if (!accept && userAgent) {
+    return { isBot: true, reason: "Missing Accept header" };
+  }
+  
+  // Check for suspicious headers
+  const xForwardedFor = request.headers.get("x-forwarded-for");
+  const xRealIp = request.headers.get("x-real-ip");
+  
+  // Multiple proxies can indicate attempt to hide origin
+  if (xForwardedFor && xForwardedFor.split(",").length > 3) {
+    return { isBot: true, reason: "Suspicious proxy chain" };
+  }
+  
+  return { isBot: false };
+}
+
+// -----------------------------------------------------
+// 3. Upstash Redis Rate Limiter (Production-Grade)
 // -----------------------------------------------------
 
 let redis: Redis | null = null;
@@ -49,6 +96,8 @@ let signupLimiter: Ratelimit | null = null;
 let passwordResetLimiter: Ratelimit | null = null;
 let apiLimiter: Ratelimit | null = null;
 let webhookLimiter: Ratelimit | null = null;
+let aiGenerationLimiter: Ratelimit | null = null;
+let checkoutLimiter: Ratelimit | null = null;
 
 function getLoginLimiter(): Ratelimit | null {
   const client = getRedisClient();
@@ -120,6 +169,35 @@ function getWebhookLimiter(): Ratelimit | null {
   return webhookLimiter;
 }
 
+function getAiGenerationLimiter(): Ratelimit | null {
+  const client = getRedisClient();
+  if (!client) return null;
+  if (!aiGenerationLimiter) {
+    // 20 AI generation requests per minute per user
+    // This prevents abuse of OpenAI/Bland AI API credits
+    aiGenerationLimiter = new Ratelimit({
+      redis: client,
+      limiter: Ratelimit.slidingWindow(20, "1m"),
+      prefix: "ratelimit:ai_generation",
+    });
+  }
+  return aiGenerationLimiter;
+}
+
+function getCheckoutLimiter(): Ratelimit | null {
+  const client = getRedisClient();
+  if (!client) return null;
+  if (!checkoutLimiter) {
+    // 5 checkout requests per minute per IP (prevent payment abuse)
+    checkoutLimiter = new Ratelimit({
+      redis: client,
+      limiter: Ratelimit.slidingWindow(5, "1m"),
+      prefix: "ratelimit:checkout",
+    });
+  }
+  return checkoutLimiter;
+}
+
 export type RateLimitResult = {
   success: boolean;
   limit: number;
@@ -127,7 +205,10 @@ export type RateLimitResult = {
   reset: number;
 };
 
-export async function checkRateLimit(type: "login" | "signup" | "password_reset" | "api" | "webhook", identifier: string): Promise<RateLimitResult> {
+export async function checkRateLimit(
+  type: "login" | "signup" | "password_reset" | "api" | "webhook" | "ai_generation" | "checkout",
+  identifier: string
+): Promise<RateLimitResult> {
   let limiter: Ratelimit | null = null;
   
   switch (type) {
@@ -145,6 +226,12 @@ export async function checkRateLimit(type: "login" | "signup" | "password_reset"
       break;
     case "webhook":
       limiter = getWebhookLimiter();
+      break;
+    case "ai_generation":
+      limiter = getAiGenerationLimiter();
+      break;
+    case "checkout":
+      limiter = getCheckoutLimiter();
       break;
   }
   

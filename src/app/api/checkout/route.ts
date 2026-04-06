@@ -1,9 +1,42 @@
 import { NextResponse } from "next/server";
 import { razorpay } from "@/lib/razorpay";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, detectBot } from "@/lib/security";
+import { logSuspiciousActivity, logApiError } from "@/lib/logger";
 
 export async function POST(req: Request) {
   try {
+    // Bot detection
+    const botCheck = detectBot(req);
+    if (botCheck.isBot) {
+      logSuspiciousActivity("bot_detected", botCheck.reason || "Unknown bot", { 
+        path: "/api/checkout",
+        userAgent: req.headers.get("user-agent") 
+      });
+      return NextResponse.json({ error: "Automated requests not allowed" }, { status: 403 });
+    }
+
+    // Rate limit: 5 checkout requests per minute per IP
+    const ip = req.headers.get("x-forwarded-for") || "unknown_ip";
+    const rateLimitResult = await checkRateLimit("checkout", ip);
+    if (!rateLimitResult.success) {
+      logSuspiciousActivity("rate_limit_exceeded", "Checkout rate limit exceeded", { 
+        ip, 
+        limit: rateLimitResult.limit 
+      });
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { 
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": String(rateLimitResult.limit),
+            "X-RateLimit-Remaining": String(rateLimitResult.remaining),
+            "X-RateLimit-Reset": String(rateLimitResult.reset),
+          },
+        }
+      );
+    }
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -35,7 +68,7 @@ export async function POST(req: Request) {
       keyId: process.env.RAZORPAY_KEY_ID,
     });
   } catch (error: any) {
-    console.error("[Razorpay Checkout Error]", error);
+    logApiError("/api/checkout", error as Error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

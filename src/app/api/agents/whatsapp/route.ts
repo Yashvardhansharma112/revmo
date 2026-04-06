@@ -1,7 +1,27 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, detectBot } from "@/lib/security";
+import { logApiError } from "@/lib/logger";
 
 export async function GET(request: Request) {
+  // Bot detection
+  const botCheck = detectBot(request);
+  if (botCheck.isBot) {
+    return NextResponse.json({ error: "Automated requests not allowed" }, { status: 403 });
+  }
+
+  // Rate limit per user for API endpoints
+  const userId = request.headers.get("x-user-id");
+  if (userId) {
+    const rateLimitResult = await checkRateLimit("api", userId);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 }
+      );
+    }
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -21,6 +41,24 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // Bot detection
+  const botCheck = detectBot(request);
+  if (botCheck.isBot) {
+    return NextResponse.json({ error: "Automated requests not allowed" }, { status: 403 });
+  }
+
+  // Rate limit per user for API endpoints
+  const userId = request.headers.get("x-user-id");
+  if (userId) {
+    const rateLimitResult = await checkRateLimit("api", userId);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 }
+      );
+    }
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
