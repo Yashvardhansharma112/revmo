@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MessageCircle, Clock, Save, BrainCircuit, Activity } from "lucide-react";
+import { MessageCircle, Clock, Save, BrainCircuit, Activity, Send, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function WhatsAppAgentClient() {
@@ -14,6 +14,11 @@ export default function WhatsAppAgentClient() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testMode, setTestMode] = useState(false);
+  const [testPhone, setTestPhone] = useState("");
+  const [testMessage, setTestMessage] = useState("");
+  const [testLoading, setTestLoading] = useState(false);
+  const [testResult, setTestResult] = useState<{success: boolean; message: string} | null>(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -60,6 +65,36 @@ export default function WhatsAppAgentClient() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTestSend = async () => {
+    if (!testPhone || !testMessage) {
+      toast.error("Please enter phone number and message");
+      return;
+    }
+    setTestLoading(true);
+    setTestResult(null);
+    try {
+      const res = await fetch("/api/agents/tests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          test_type: "whatsapp_message",
+          phone: testPhone,
+          message: testMessage,
+          agent_type: "whatsapp"
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send");
+      setTestResult({ success: true, message: data.message || "Test sent!" });
+      toast.success("Test Message Sent", { description: data.message });
+    } catch (err: any) {
+      setTestResult({ success: false, message: err.message });
+      toast.error("Test Failed", { description: err.message });
+    } finally {
+      setTestLoading(false);
     }
   };
 
@@ -162,6 +197,72 @@ export default function WhatsAppAgentClient() {
             />
           </div>
         </div>
+      </div>
+
+      {/* Test Mode Section */}
+      <div className="glass-card p-6 border-t-4 border-t-[#25D366]">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <Send className="w-5 h-5 text-[#25D366]" />
+            <h3 className="text-lg font-bold text-white">Test Mode</h3>
+          </div>
+          <button
+            onClick={() => setTestMode(!testMode)}
+            className="text-sm text-[#25D366] hover:underline font-medium"
+          >
+            {testMode ? "Hide" : "Show"}
+          </button>
+        </div>
+        
+        {testMode && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <p className="text-sm text-zinc-400">
+              Send a test WhatsApp message to verify your configuration is working.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2 block">Test Phone Number</label>
+                <input
+                  type="tel"
+                  placeholder="+1234567890"
+                  className="w-full bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.08)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#25D366] transition-colors"
+                  value={testPhone}
+                  onChange={(e) => setTestPhone(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2 block">Test Message</label>
+                <input
+                  type="text"
+                  placeholder="Your test message here..."
+                  className="w-full bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.08)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#25D366] transition-colors"
+                  value={testMessage}
+                  onChange={(e) => setTestMessage(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleTestSend}
+                disabled={testLoading || !testPhone || !testMessage}
+                className="bg-[#25D366]/20 text-[#25D366] hover:bg-[#25D366]/30 px-6 py-2 rounded-xl font-bold transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {testLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                Send Test Message
+              </button>
+              {testResult && (
+                <div className={`flex items-center gap-2 text-sm ${testResult.success ? "text-emerald-400" : "text-red-400"}`}>
+                  {testResult.success ? <CheckCircle2 className="w-4 h-4" /> : <span className="w-4 h-4 rounded-full bg-red-400/20 flex items-center justify-center text-xs">✕</span>}
+                  {testResult.message}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end pt-4 border-t border-[rgba(255,255,255,0.08)]">

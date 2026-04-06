@@ -11,23 +11,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Automated requests not allowed" }, { status: 403 });
   }
 
-  // Rate limit per user for API endpoints
-  const userId = request.headers.get("x-user-id");
-  if (userId) {
-    const rateLimitResult = await checkRateLimit("api", userId);
-    if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { error: "Too many requests" },
-        { status: 429 }
-      );
-    }
-  }
-
+  // Auth first — user.id is the only trustworthy identifier for rate limiting
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Rate limit per authenticated user (not the spoofable x-user-id header)
+  const rateLimitResult = await checkRateLimit("api", user.id);
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429 }
+    );
   }
 
   const { data, error } = await supabase
@@ -52,18 +50,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Automated requests not allowed" }, { status: 403 });
   }
 
-  // Rate limit per user for API endpoints
-  const userId = req.headers.get("x-user-id");
-  if (userId) {
-    const rateLimitResult = await checkRateLimit("api", userId);
-    if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { error: "Too many requests" },
-        { status: 429 }
-      );
-    }
-  }
-
   // Parse and validate request body
   let body;
   try {
@@ -75,11 +61,21 @@ export async function POST(req: Request) {
     );
   }
 
+  // Auth first — user.id is the only trustworthy identifier for rate limiting
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Rate limit per authenticated user (not the spoofable x-user-id header)
+  const rateLimitResult = await checkRateLimit("api", user.id);
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429 }
+    );
   }
 
   // Validate settings object with strict schema

@@ -20,6 +20,7 @@
     "@upstash/redis": "^1.37.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "framer-motion": "^12.38.0",
     "inngest": "^4.1.0",
     "lucide-react": "^1.7.0",
@@ -33,7 +34,8 @@
     "resend": "^6.10.0",
     "sonner": "^2.0.7",
     "stripe": "^21.0.1",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "twilio": "^5.13.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -205,8 +205,10 @@ export type RateLimitResult = {
   reset: number;
 };
 
+export type RateLimitType = "login" | "signup" | "password_reset" | "api" | "webhook" | "ai_generation" | "checkout" | "team_create" | "team_invite" | "store_add" | "ab_create" | string;
+
 export async function checkRateLimit(
-  type: "login" | "signup" | "password_reset" | "api" | "webhook" | "ai_generation" | "checkout",
+  type: RateLimitType,
   identifier: string
 ): Promise<RateLimitResult> {
   let limiter: Ratelimit | null = null;
@@ -222,6 +224,10 @@ export async function checkRateLimit(
       limiter = getPasswordResetLimiter();
       break;
     case "api":
+    case "team_create":
+    case "team_invite":
+    case "store_add":
+    case "ab_create":
       limiter = getApiLimiter();
       break;
     case "webhook":
@@ -233,9 +239,11 @@ export async function checkRateLimit(
     case "checkout":
       limiter = getCheckoutLimiter();
       break;
+    default:
+      limiter = getApiLimiter();
   }
   
-  // If Redis is not configured, allow all requests (graceful degradation)
+// If Redis is not configured, allow all requests (graceful degradation)
   if (!limiter) {
     return { success: true, limit: 0, remaining: 0, reset: 0 };
   }

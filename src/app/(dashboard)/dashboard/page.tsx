@@ -2,6 +2,7 @@
 
 import { motion, Variants } from "framer-motion";
 import dynamic from "next/dynamic";
+import { useState, useEffect } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -20,8 +21,6 @@ import {
 
 const DashboardCharts = dynamic(() => import("./DashboardCharts"), { ssr: false });
 
-
-
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
@@ -30,6 +29,13 @@ const fadeUp: Variants = {
     transition: { delay: i * 0.06, duration: 0.4, ease: [0.4, 0, 0.2, 1] as [number, number, number, number] },
   }),
 };
+
+interface AgentActivity {
+  agent_type: string;
+  status: string;
+  count: number;
+  revenue: number;
+}
 
 const kpis = [
   {
@@ -66,32 +72,11 @@ const kpis = [
   },
 ];
 
-const agentStatus = [
-  {
-    name: "Inventory Optimizer",
-    icon: Package,
-    status: "Active",
-    color: "#10b981",
-    metric: "Saved ₹45,200 this month",
-    actions: 128,
-  },
-  {
-    name: "WhatsApp Nudge",
-    icon: MessageCircle,
-    status: "Active",
-    color: "#7c3aed",
-    metric: "32 carts recovered today",
-    actions: 94,
-  },
-  {
-    name: "Voice Closer",
-    icon: Phone,
-    status: "Active",
-    color: "#2563eb",
-    metric: "18 calls completed today",
-    actions: 56,
-  },
-];
+const agentStatusMap: Record<string, any> = {
+  inventory: { name: "Inventory Optimizer", icon: Package, color: "#10b981" },
+  whatsapp: { name: "WhatsApp Nudge", icon: MessageCircle, color: "#7c3aed" },
+  voice: { name: "Voice Closer", icon: Phone, color: "#2563eb" },
+};
 
 const recentActivity = [
   { type: "cart", text: "WhatsApp Agent recovered cart #4821 — ₹3,200", time: "2m ago", color: "#7c3aed" },
@@ -127,6 +112,41 @@ const insights = [
 ];
 
 export default function DashboardPage() {
+  const [agentActivity, setAgentActivity] = useState<AgentActivity[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAgentActivity = async () => {
+      try {
+        const res = await fetch("/api/agents/activity?limit=10");
+        if (res.ok) {
+          const { activity } = await res.json();
+          setAgentActivity(activity || []);
+        }
+      } catch (err) {
+        console.error("Failed to load agent activity", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAgentActivity();
+  }, []);
+
+  // Build agent status from activity
+  const agentStatus = ["inventory", "whatsapp", "voice"].map((type) => {
+    const agentData = agentActivity.filter((a) => a.agent_type === type);
+    const totalActions = agentData.reduce((sum, a) => sum + a.count, 0);
+    const totalRevenue = agentData.reduce((sum, a) => sum + (a.revenue || 0), 0);
+    const config = agentStatusMap[type];
+    return {
+      name: config.name,
+      icon: config.icon,
+      status: "Active",
+      color: config.color,
+      metric: totalRevenue > 0 ? `₹${totalRevenue.toLocaleString()} recovered` : `${totalActions} actions`,
+      actions: totalActions,
+    };
+  });
   return (
     <div className="space-y-6">
       {/* Page header */}

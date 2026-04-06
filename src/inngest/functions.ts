@@ -20,35 +20,35 @@ export const recoverAbandonedCheckout = inngest.createFunction(
     triggers: [{ event: "StorePilot/checkout.abandoned" }]
   },
   async ({ event, step }) => {
-    // @ts-ignore
-    const { checkoutId, phone, customerName, cartTotal, items, abandonUrl } = event.data;
+    const { checkoutId, phone, customerName, cartTotal, items, abandonUrl, userId } = event.data;
+
+    if (!userId) {
+      return { status: "failed", reason: "Missing userId in event data. Cannot determine merchant." };
+    }
 
     // Step 1: Wait 15 minutes before acting (standard abandoned cart delay)
     await step.sleep("wait-for-recovery", "15m");
 
     // Step 2: Fetch agent configurations securely
     const configStep = await step.run("fetch-agent-config", async () => {
-      // Fetch ALL voice agent configurations (need to check which one is active)
-      const { data: voiceConfigs, error: voiceError } = await supabase
+      // Scope strictly to this merchant's config (prevents cross-tenant IDOR)
+      const { data: activeVoiceConfig, error: voiceError } = await supabase
         .from("agent_configurations")
         .select("user_id, settings, is_active")
-        .eq("agent_type", "voice");
-        
-      if (voiceError || !voiceConfigs || voiceConfigs.length === 0) {
+        .eq("agent_type", "voice")
+        .eq("user_id", userId)        // ← scope to correct merchant
+        .eq("is_active", true)
+        .single();
+
+      if (voiceError || !activeVoiceConfig) {
         return { configured: false, blandKey: null, persona: null, script: null };
       }
 
-      // Find the first active voice config (IDOR protection: we must filter by is_active)
-      const activeVoiceConfig = voiceConfigs.find(c => c.is_active === true);
-      if (!activeVoiceConfig) {
-        return { configured: false, blandKey: null, persona: null, script: null };
-      }
-
-      // Fetch the merchant's integration keys
+      // Fetch the merchant's integration keys (already scoped to userId)
       const { data: integrationsData } = await supabase
          .from("agent_configurations")
          .select("api_keys")
-         .eq("user_id", activeVoiceConfig.user_id)
+         .eq("user_id", userId)        // ← always use event userId, not DB-joined userId
          .eq("agent_type", "integrations")
          .single();
          
@@ -57,11 +57,10 @@ export const recoverAbandonedCheckout = inngest.createFunction(
       }
       
       const apiKeys = integrationsData.api_keys;
-      // Decrypt the Bland API key (stored encrypted)
       const decryptedBlandKey = apiKeys.bland ? decrypt(apiKeys.bland) : null;
       
       return { 
-        configured: true, 
+        configured: !!decryptedBlandKey, 
         blandKey: decryptedBlandKey, 
         persona: activeVoiceConfig.settings?.persona || "friendly",
         script: activeVoiceConfig.settings?.script || `You noticed they left some items...`
@@ -113,47 +112,34 @@ export const recoverViaWhatsApp = inngest.createFunction(
     triggers: [{ event: "StorePilot/checkout.abandoned" }]
   },
   async ({ event, step }) => {
-    // @ts-ignore
-    const { checkoutId, phone, customerName, cartTotal, items, abandonUrl } = event.data;
+    const { checkoutId, phone, customerName, cartTotal, items, abandonUrl, userId } = event.data;
+
+    if (!userId) {
+      return { status: "failed", reason: "Missing userId in event data. Cannot determine merchant." };
+    }
 
     // Step 1: Fetch agent configurations securely to get the delay timing
     const configStep = await step.run("fetch-whatsapp-config", async () => {
-      // Fetch ALL whatsapp configs and filter by is_active (IDOR protection)
-      const { data: waConfigs, error: waError } = await supabase
+      // Scope strictly to this merchant's config (prevents cross-tenant IDOR)
+      const { data: activeWaConfig, error: waError } = await supabase
         .from("agent_configurations")
         .select("user_id, settings, is_active")
-        .eq("agent_type", "whatsapp");
-        
-      if (waError || !waConfigs || waConfigs.length === 0) {
-        return { 
-          configured: false, 
-          openaiKey: null, 
-          twilioSid: null, 
-          twilioToken: null, 
-          senderId: null, 
-          delayMinutes: 0, 
-          prompt: null 
-        };
-      }
+        .eq("agent_type", "whatsapp")
+        .eq("user_id", userId)         // ← scope to correct merchant
+        .eq("is_active", true)
+        .single();
 
-      // Find the active WhatsApp config
-      const activeWaConfig = waConfigs.find(c => c.is_active === true);
-      if (!activeWaConfig || !activeWaConfig.settings?.isActive) {
+      if (waError || !activeWaConfig || !activeWaConfig.settings?.isActive) {
         return { 
-          configured: false, 
-          openaiKey: null, 
-          twilioSid: null, 
-          twilioToken: null, 
-          senderId: null, 
-          delayMinutes: 0, 
-          prompt: null 
+          configured: false, openaiKey: null, twilioSid: null,
+          twilioToken: null, senderId: null, delayMinutes: 0, prompt: null 
         };
       }
 
       const { data: integrationsData } = await supabase
          .from("agent_configurations")
          .select("api_keys")
-         .eq("user_id", activeWaConfig.user_id)
+         .eq("user_id", userId)         // ← always use event userId
          .eq("agent_type", "integrations")
          .single();
          
@@ -369,7 +355,7 @@ export const processMerchantInventory = inngest.createFunction(
       // Normalizing shopify URL
       const shopRegex = /([a-zA-Z0-9\-]+)\.myshopify\.com/i;
       const match = configStep.shopifyUrl.match(shopRegex);
-      if (!match) return null;
+      if (!match || !configStep.shopifyToken) return null;
       
       const endpoint = `https://${match[0]}/admin/api/2024-01/variants.json?limit=50`;
       

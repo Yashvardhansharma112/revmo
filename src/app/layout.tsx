@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
 import { Toaster } from 'sonner';
+import { LoadingProvider } from "@/components/LoadingProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -56,9 +57,11 @@ export default function RootLayout({
     <html lang="en" className="dark" suppressHydrationWarning>
       <body className={`${inter.variable} antialiased`} suppressHydrationWarning>
         <PostHogProvider>
-          <div className="bg-mesh" />
-          {children}
-          <Toaster theme="dark" richColors closeButton position="bottom-right" />
+          <LoadingProvider>
+            <div className="bg-mesh" />
+            {children}
+            <Toaster theme="dark" richColors closeButton position="bottom-right" />
+          </LoadingProvider>
         </PostHogProvider>
       </body>
     </html>

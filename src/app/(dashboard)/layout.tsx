@@ -20,6 +20,7 @@ import {
   Bell,
   LogOut,
   Search,
+  FlaskConical,
 } from "lucide-react";
 
 const navSections = [
@@ -43,6 +44,7 @@ const navSections = [
     items: [
       { href: "/customers", icon: Users, label: "Customers" },
       { href: "/campaigns", icon: Megaphone, label: "Campaigns" },
+      { href: "/ab-tests", icon: FlaskConical, label: "A/B Tests", badge: "New" },
       { href: "/automation", icon: Zap, label: "Automation" },
       { href: "/inbox", icon: Inbox, label: "Inbox", badge: "12" },
     ],

@@ -99,13 +99,16 @@ export async function POST(request: Request) {
     }
 
     // Decrypt the OpenAI key (it's stored encrypted)
-    let openaiKey: string;
-    try {
-      openaiKey = decrypt(integrations.api_keys.openaiKey);
-    } catch {
-      console.error("[Twilio Webhook] Failed to decrypt OpenAI key");
-      return new NextResponse("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response></Response>", { status: 200, headers: { "Content-Type": "text/xml" }});
+    const decryptedKey = decrypt(integrations.api_keys.openaiKey);
+    if (!decryptedKey) {
+      console.error("[Twilio Webhook] Failed to decrypt OpenAI key. Check your ENCRYPTION_KEY.");
+      return new NextResponse("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response></Response>", { 
+        status: 200, 
+        headers: { "Content-Type": "text/xml" }
+      });
     }
+
+    const openaiKey = decryptedKey;
 
     const prompt = config.settings.prompt || "You are a customer service representative.";
 
@@ -140,7 +143,37 @@ export async function POST(request: Request) {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&apos;");
 
-    // 5. Return TwiML XML immediately to leverage zero-latency messaging
+    // 5. Record interaction in agent_activity for "Exit on Interaction" logic
+    // We try to link the incoming message to an active campaign recipient by phone number
+    const { data: recipient } = await supabase
+      .from("campaign_recipients")
+      .select("id, campaign_id, variant_id")
+      .eq("contact_id", from) // 'from' is the customer phone
+      .neq("status", "converted")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (recipient) {
+      await supabase.from("agent_activity").insert({
+        user_id: config.user_id,
+        campaign_id: recipient.campaign_id,
+        variant_id: recipient.variant_id,
+        contact_id: recipient.id, // We use the recipient UUID as contact_id for sequence tracking
+        type: "customer_reply",
+        status: "completed",
+        metadata: { 
+          from: from, 
+          body: sanitizedBody,
+          channel: "whatsapp"
+        }
+      });
+
+      // Also mark as 'delivered' (meaning they responded) or handled elsewhere
+      // For now, the sequence engine checks for 'customer_reply' type.
+    }
+
+    // 6. Return TwiML XML immediately to leverage zero-latency messaging
     const twiml = `<?xml version="1.0\" encoding=\"UTF-8\"?>\n<Response>\n  <Message>${escapedReply}</Message>\n</Response>`;
 
     return new NextResponse(twiml, {

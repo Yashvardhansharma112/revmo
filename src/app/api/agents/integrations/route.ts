@@ -38,16 +38,19 @@ export async function GET(request: Request) {
   }
 
   // Decrypt and mask keys before sending to client
-  // so the client never sees the raw keys
+  // so the client never sees raw keys or ciphertext
   if (data && data.api_keys) {
     const maskedKeys: Record<string, string> = {};
     for (const [provider, encryptedKey] of Object.entries(data.api_keys as Record<string, string>)) {
       if (!encryptedKey) continue;
-      
+
       const decrypted = decrypt(encryptedKey);
-      // Fallback: if decryption failed or it's unencrypted plain string from Phase 2,
-      // it returns same string, so just mask it regardless.
-      maskedKeys[provider] = maskKey(decrypted);
+      if (decrypted === null) {
+        // Decryption failed (key rotation / corrupt data) — show placeholder
+        maskedKeys[provider] = "****";
+      } else {
+        maskedKeys[provider] = maskKey(decrypted);
+      }
     }
     data.api_keys = maskedKeys;
   }
@@ -60,16 +63,6 @@ export async function POST(req: Request) {
   const botCheck = detectBot(req);
   if (botCheck.isBot) {
     return NextResponse.json({ error: "Automated requests not allowed" }, { status: 403 });
-  }
-
-  // Rate limit: 20 per minute based on IP to stop credential stuffing
-  const ip = req.headers.get("x-forwarded-for") || "unknown_ip";
-  const rateLimitResult = await checkRateLimit("api", ip);
-  if (!rateLimitResult.success) {
-    return NextResponse.json(
-      { error: "Rate Limit Exceeded" },
-      { status: 429, headers: { 'X-RateLimit-Reset': String(rateLimitResult.reset) } }
-    );
   }
 
   // Parse and validate request body
@@ -85,10 +78,20 @@ export async function POST(req: Request) {
 
   const supabase = await createClient();
 
+  // Auth before rate limiting — user.id cannot be spoofed unlike x-forwarded-for
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Rate limit by authenticated user.id (prevents credential-stuffing and IP spoofing)
+  const rateLimitResult = await checkRateLimit("api", user.id);
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: "Rate Limit Exceeded" },
+      { status: 429, headers: { 'X-RateLimit-Reset': String(rateLimitResult.reset) } }
+    );
   }
 
   // Validate api_keys object with strict schema

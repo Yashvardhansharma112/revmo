@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Mic, Play, Pause, Save, CheckCircle, Volume2 } from "lucide-react";
+import { Mic, Play, Pause, Save, CheckCircle, Volume2, Phone, Loader2, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 
 // Sample voices data
 const VOICES = [
@@ -47,6 +48,11 @@ export default function VoiceAgentSetup() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [testMode, setTestMode] = useState(false);
+  const [testPhone, setTestPhone] = useState("");
+  const [testMessage, setTestMessage] = useState("");
+  const [testLoading, setTestLoading] = useState(false);
+  const [testResult, setTestResult] = useState<{success: boolean; message: string} | null>(null);
 
   useEffect(() => {
     const fetchVoiceConfig = async () => {
@@ -98,6 +104,36 @@ export default function VoiceAgentSetup() {
       setError("An error occurred while saving.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTestCall = async () => {
+    if (!testPhone) {
+      toast.error("Please enter a phone number");
+      return;
+    }
+    setTestLoading(true);
+    setTestResult(null);
+    try {
+      const res = await fetch("/api/agents/tests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          test_type: "voice_call",
+          phone: testPhone,
+          message: testMessage || undefined,
+          agent_type: "voice"
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to initiate call");
+      setTestResult({ success: true, message: data.message || "Call initiated!" });
+      toast.success("Test Call Initiated", { description: data.message });
+    } catch (err: any) {
+      setTestResult({ success: false, message: err.message });
+      toast.error("Test Failed", { description: err.message });
+    } finally {
+      setTestLoading(false);
     }
   };
 
@@ -211,6 +247,72 @@ export default function VoiceAgentSetup() {
           )}
           {saving ? "Saving..." : saved ? "Persona Saved" : "Save Voice Persona"}
         </button>
+      </div>
+
+      {/* Test Mode Section */}
+      <div className="glass-card p-6 border-t-4 border-t-[var(--color-accent)]">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <Phone className="w-5 h-5 text-[var(--color-accent)]" />
+            <h3 className="text-lg font-bold text-white">Test Mode</h3>
+          </div>
+          <button
+            onClick={() => setTestMode(!testMode)}
+            className="text-sm text-[var(--color-accent)] hover:underline font-medium"
+          >
+            {testMode ? "Hide" : "Show"}
+          </button>
+        </div>
+        
+        {testMode && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <p className="text-sm text-zinc-400">
+              Initiate a test voice call to verify your voice agent is working correctly.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2 block">Test Phone Number</label>
+                <input
+                  type="tel"
+                  placeholder="+1234567890"
+                  className="w-full bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.08)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+                  value={testPhone}
+                  onChange={(e) => setTestPhone(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2 block">Custom Message (optional)</label>
+                <input
+                  type="text"
+                  placeholder="Leave empty to use saved script"
+                  className="w-full bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.08)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+                  value={testMessage}
+                  onChange={(e) => setTestMessage(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleTestCall}
+                disabled={testLoading || !testPhone}
+                className="bg-[var(--color-accent)]/20 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/30 px-6 py-2 rounded-xl font-bold transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {testLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Phone className="w-4 h-4" />
+                )}
+                Initiate Test Call
+              </button>
+              {testResult && (
+                <div className={`flex items-center gap-2 text-sm ${testResult.success ? "text-emerald-400" : "text-red-400"}`}>
+                  {testResult.success ? <CheckCircle2 className="w-4 h-4" /> : <span className="w-4 h-4 rounded-full bg-red-400/20 flex items-center justify-center text-xs">✕</span>}
+                  {testResult.message}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -19,7 +19,10 @@ export type SecurityEventType =
   | "webhook_failed_validation"
   | "suspicious_traffic"
   | "data_access_violation"
-  | "configuration_changed";
+  | "configuration_changed"
+  | "test_whatsapp_sent"
+  | "test_voice_call"
+  | "team_invitation_sent";
 
 interface LogEntry {
   timestamp: string;
